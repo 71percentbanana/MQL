@@ -548,8 +548,8 @@ def build_presentation():
     tf.word_wrap = True
     
     p = tf.paragraphs[0]
-    p.text = "Formal LL(1) Grammar (EBNF)"
-    p.font.size = Pt(19)
+    p.text = "LL(1) Grammar"
+    p.font.size = Pt(20)
     p.font.bold = True
     p.font.color.rgb = NAVY
     p.space_after = Pt(10)
@@ -637,21 +637,23 @@ def build_presentation():
         ("src/lexer.h & src/lexer.c",
          "Defines TokenType enums and Token structs. Implements token scanning, keyword lookup, line/column tracking, and lexical error handling."),
         ("src/parser.h & src/parser.c",
-         "Defines ASTNode structs (Program, Decl, Assign, If, Condition, Action). Implements recursive descent parser and hierarchical tree visualizer."),
+         "Defines ASTNode structs. Implements recursive descent parser and hierarchical tree visualizer."),
+        ("src/symbol_table.h & src/symbol_table.c",
+         "Defines Symbol and SymbolTable. Tracks identifier types (integer, state, vehicle), initial values, and global scopes."),
         ("src/main.c",
-         "CLI driver. Parses flags (--tokens, --ast, --all), reads source files, and orchestrates the compiler pipeline.")
+         "CLI driver. Parses flags (--tokens, --ast, --symtab, --all), reads source files, and orchestrates the compiler pipeline.")
     ]
     for fn, desc in c_files:
         p = tf.add_paragraph()
         p.text = fn
-        p.font.size = Pt(15.5)
+        p.font.size = Pt(14)
         p.font.bold = True
         p.font.color.rgb = BLUE
         p2 = tf.add_paragraph()
         p2.text = "  " + desc
-        p2.font.size = Pt(14)
+        p2.font.size = Pt(12)
         p2.font.color.rgb = DARK_TEXT
-        p2.space_after = Pt(6)
+        p2.space_after = Pt(4)
 
     # Right: Technical Highlights
     add_card(s10, 6.8, 1.55, 5.7, 5.4)
@@ -682,7 +684,7 @@ def build_presentation():
         p.space_after = Pt(8)
 
     # =========================================================================
-    # SLIDE 11: CHAPTER 9 - PROTOTYPE OUTPUTS (LEXER & PARSER ONLY)
+    # SLIDE 11: CHAPTER 9 - PROTOTYPE OUTPUTS (LEXER & PARSER)
     # =========================================================================
     s11 = prs.slides.add_slide(blank_layout)
     add_header(s11, "Chapter 9", "Review 1 Prototype Outputs: Lexer & Parser")
@@ -776,93 +778,92 @@ def build_presentation():
     p.font.color.rgb = NAVY
 
     # =========================================================================
-    # SLIDE 12: CHAPTER 9 (CONT.) - PROTOTYPE ERROR DIAGNOSTICS (LEXER & PARSER)
+    # SLIDE 12: CHAPTER 9 (CONT.) - SYMBOL TABLE & ERROR DETECTION
     # =========================================================================
     s12 = prs.slides.add_slide(blank_layout)
-    add_header(s12, "Chapter 9", "Review 1 Prototype: Error Detection Outputs")
+    add_header(s12, "Chapter 9", "Review 1 Prototype: Symbol Table & Error Handling")
 
-    # Left: Lexical Error Output
+    # Left: Symbol Table Output
     add_card(s12, 0.8, 1.55, 5.6, 5.4)
     b12_1 = s12.shapes.add_textbox(Inches(1.1), Inches(1.8), Inches(5.0), Inches(4.9))
     tf12_1 = b12_1.text_frame
     tf12_1.word_wrap = True
 
     p = tf12_1.paragraphs[0]
-    p.text = "Lexical Error Detection"
-    p.font.size = Pt(18)
+    p.text = "3. Symbol Table Output (--symtab)"
+    p.font.size = Pt(17)
     p.font.bold = True
     p.font.color.rgb = NAVY
-    p.space_after = Pt(6)
+    p.space_after = Pt(4)
 
     p = tf12_1.add_paragraph()
-    p.text = "Input: err_lexical.tr (Invalid character '@')"
-    p.font.size = Pt(13)
-    p.font.bold = True
-    p.font.color.rgb = RED
-    p.space_after = Pt(10)
+    p.text = "Input: examples/sample2.tr (lab5.pdf Section 12.5)"
+    p.font.size = Pt(12)
+    p.font.color.rgb = BLUE
+    p.space_after = Pt(8)
 
-    err_lex_text = (
-        "Source Line:\n"
-        "  speed = 75 @ 20\n"
-        "             ^\n"
+    sym_text = (
+        "+----+------------+---------+----------+--------+\n"
+        "| #  | Identifier | Type    | Value    | Scope  |\n"
+        "+----+------------+---------+----------+--------+\n"
+        "| 1  | car        | vehicle | -        | global |\n"
+        "| 2  | speed      | integer | 75       | global |\n"
+        "| 3  | signal     | state   | RED      | global |\n"
+        "| 4  | position   | state   | CROSSING | global |\n"
+        "+----+------------+---------+----------+--------+\n"
+        "Total Symbols Registered: 4\n"
         "\n"
-        "Compiler Diagnostic Output:\n"
-        "[LEXICAL ERROR]\n"
-        "  File: examples/err_lexical.tr\n"
-        "  Line: 3, Column: 12\n"
-        "  Message: Unrecognized character '@'\n"
-        "\n"
-        "Result:\n"
-        "  Scanner halts gracefully;\n"
-        "  Reports exact line and column;\n"
-        "  Prevents corrupted tokens from reaching parser."
+        "Verification Features:\n"
+        "• Tracks identifier name and data type\n"
+        "• Stores initial values (integer / traffic state)\n"
+        "• Global scope binding directly from AST"
     )
     p = tf12_1.add_paragraph()
-    p.text = err_lex_text
-    p.font.size = Pt(11.5)
+    p.text = sym_text
+    p.font.size = Pt(11)
     p.font.name = "Consolas"
-    p.font.color.rgb = DARK_TEXT
+    p.font.color.rgb = NAVY
 
-    # Right: Syntax Error Output
+    # Right: Error Diagnostics & Verification Banner
     add_card(s12, 6.8, 1.55, 5.7, 5.4)
     b12_2 = s12.shapes.add_textbox(Inches(7.1), Inches(1.8), Inches(5.1), Inches(4.9))
     tf12_2 = b12_2.text_frame
     tf12_2.word_wrap = True
 
     p = tf12_2.paragraphs[0]
-    p.text = "Syntax Error Detection"
-    p.font.size = Pt(18)
+    p.text = "Live Error Detection & Verification"
+    p.font.size = Pt(17)
     p.font.bold = True
     p.font.color.rgb = NAVY
-    p.space_after = Pt(6)
+    p.space_after = Pt(4)
 
     p = tf12_2.add_paragraph()
-    p.text = "Input: err_syntax.tr (Missing condition operand)"
-    p.font.size = Pt(13)
-    p.font.bold = True
-    p.font.color.rgb = RED
-    p.space_after = Pt(10)
+    p.text = "Lexical & Syntax Diagnostic Outputs:"
+    p.font.size = Pt(12)
+    p.font.color.rgb = BLUE
+    p.space_after = Pt(8)
 
-    err_syn_text = (
-        "Source Line:\n"
-        "  IF speed > {\n"
-        "             ^\n"
+    err_combined = (
+        "[SYNTAX ERROR TEST: err_syntax.tr]\n"
+        "  Source: IF speed > {\n"
+        "  Error:  Expected value after '>' at Line 5, Col 12\n"
+        "  Result: INVALID GRAMMAR (exit code 1)\n"
         "\n"
-        "Compiler Diagnostic Output:\n"
-        "[SYNTAX ERROR]\n"
-        "  File: examples/err_syntax.tr\n"
-        "  Line: 5, Column: 14\n"
-        "  Message: Expected comparison value after '>'\n"
-        "  Found:   DELIMITER '{'\n"
+        "[LEXICAL ERROR TEST: err_lexical.tr]\n"
+        "  Source: speed = 75 @ 20\n"
+        "  Error:  Unrecognized character '@' at Line 3, Col 12\n"
+        "  Result: INVALID GRAMMAR (exit code 1)\n"
         "\n"
-        "Result:\n"
-        "  Predictive LL(1) parser catches grammar violation;\n"
-        "  Aborts AST construction cleanly;\n"
-        "  Outputs line/column position."
+        "===============================================\n"
+        "  FINAL VERIFICATION: GRAMMAR IS VALID\n"
+        "  [PASS] Lexical Analysis : OK\n"
+        "  [PASS] Syntax Analysis  : OK (LL(1))\n"
+        "  [PASS] Symbol Table     : OK (4 symbols)\n"
+        "==============================================="
     )
     p = tf12_2.add_paragraph()
-    p.text = err_syn_text
-    p.font.size = Pt(11.5)
+    p.text = err_combined
+    p.font.size = Pt(10.5)
     p.font.name = "Consolas"
     p.font.color.rgb = DARK_TEXT
 

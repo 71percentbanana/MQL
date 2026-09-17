@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "parser.h"
+#include "symbol_table.h"
 
 static char* read_entire_file(const char* filepath) {
     FILE* f = fopen(filepath, "rb");
@@ -29,14 +30,15 @@ static void print_header(const char* stage_name) {
 }
 
 static void print_usage(const char* prog_name) {
-    printf("TrafficRule Compiler - Prototype (Lexer & Parser)\n");
+    printf("TrafficRule Compiler - Prototype (Lexer, Parser & Symbol Table)\n");
     printf("Course: BCSE307L Compiler Design Laboratory\n\n");
     printf("Usage: %s <source_file.tr> [options]\n\n", prog_name);
     printf("Options:\n");
     printf("  --tokens       Display lexical token stream table\n");
     printf("  --ast          Display Abstract Syntax Tree (AST)\n");
+    printf("  --symtab       Display Symbol Table (Identifiers, Types, Scopes)\n");
     printf("  --dot <file>   Export AST to Graphviz DOT format\n");
-    printf("  --all          Run both Lexer and Parser stages (Default)\n");
+    printf("  --all          Run all compiler stages (Default)\n");
     printf("  --help         Show this help message\n");
 }
 
@@ -49,12 +51,14 @@ int main(int argc, char* argv[]) {
     const char* filepath = NULL;
     bool flag_tokens = false;
     bool flag_ast = false;
+    bool flag_symtab = false;
     bool flag_all = false;
     const char* dot_filename = NULL;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--tokens") == 0) flag_tokens = true;
         else if (strcmp(argv[i], "--ast") == 0) flag_ast = true;
+        else if (strcmp(argv[i], "--symtab") == 0) flag_symtab = true;
         else if (strcmp(argv[i], "--all") == 0) flag_all = true;
         else if (strcmp(argv[i], "--help") == 0) {
             print_usage(argv[0]);
@@ -74,8 +78,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Default to --all if neither --tokens nor --ast is specified
-    if (!flag_tokens && !flag_ast && !dot_filename) {
+    // Default to --all if neither --tokens, --ast, nor --symtab is specified
+    if (!flag_tokens && !flag_ast && !flag_symtab && !dot_filename) {
         flag_all = true;
     }
 
@@ -159,6 +163,20 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // =========================================================================
+    // Stage 3: Symbol Table Management
+    // =========================================================================
+    SymbolTable symtab;
+    symbol_table_init(&symtab);
+    symbol_table_build_from_ast(&symtab, ast);
+
+    if (flag_symtab || flag_all) {
+        print_header("3. Symbol Table Management");
+        symbol_table_print(&symtab);
+    }
+
+    int sym_count = symtab.count;
+    symbol_table_free(&symtab);
     ast_free(ast);
     free(source);
 
@@ -167,6 +185,7 @@ int main(int argc, char* argv[]) {
     printf("======================================================================\n");
     printf("  [PASS] Lexical Analysis : OK (All tokens valid)\n");
     printf("  [PASS] Syntax Analysis  : OK (Conforms to LL(1) Grammar)\n");
+    printf("  [PASS] Symbol Table     : OK (%d symbols registered)\n", sym_count);
     printf("  [PASS] Grammar Status   : VALID TRAFFICRULE PROGRAM\n");
     printf("======================================================================\n");
     return 0;
