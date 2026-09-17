@@ -12,15 +12,15 @@ def build_presentation():
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
 
-    # Clean, High-Contrast Color Palette
-    NAVY = RGBColor(15, 23, 42)         # Primary Dark Blue/Slate (Headers)
-    BLUE = RGBColor(37, 99, 235)        # Accent Blue (Tags, Highlights)
-    DARK_TEXT = RGBColor(30, 41, 59)    # High-contrast readable body text
-    LIGHT_BG = RGBColor(248, 250, 252)  # Slide card background
-    BORDER_COLOR = RGBColor(203, 213, 225) # Card border
+    # Clean, High-Contrast Color Palette (All White Backgrounds)
+    NAVY = RGBColor(15, 23, 42)         # Slate 900 (Primary Headers)
+    BLUE = RGBColor(37, 99, 235)        # Royal Blue 600 (Accents)
+    DARK_TEXT = RGBColor(30, 41, 59)    # Slate 800 (Readable Body Text)
+    LIGHT_BG = RGBColor(248, 250, 252)  # Slate 50 (Card Background)
+    BORDER_COLOR = RGBColor(203, 213, 225) # Slate 300 (Card Border)
     WHITE = RGBColor(255, 255, 255)
-    GREEN = RGBColor(16, 185, 129)      # Pass / Objectives
-    RED = RGBColor(220, 38, 38)         # Out-of-scope / Errors
+    GREEN = RGBColor(16, 185, 129)      # Emerald Green
+    RED = RGBColor(220, 38, 38)         # Red 600
     BLUE_BG = RGBColor(239, 246, 255)   # Light blue tint
 
     blank_layout = prs.slide_layouts[6]
@@ -38,7 +38,7 @@ def build_presentation():
         strip.fill.fore_color.rgb = BLUE
         strip.line.fill.background()
 
-        # Chapter Number Tag (Big & bold)
+        # Chapter Number Tag
         tag_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.35), Inches(11.7), Inches(0.35))
         tf_tag = tag_box.text_frame
         tf_tag.word_wrap = True
@@ -49,7 +49,7 @@ def build_presentation():
         p_tag.font.bold = True
         p_tag.font.color.rgb = BLUE
 
-        # Main Slide Title (Large, clear, easily readable)
+        # Main Slide Title
         title_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.72), Inches(11.7), Inches(0.65))
         tf_title = title_box.text_frame
         tf_title.word_wrap = True
@@ -69,21 +69,21 @@ def build_presentation():
         return card
 
     # =========================================================================
-    # SLIDE 1: TITLE SLIDE
+    # SLIDE 1: TITLE SLIDE (WHITE BACKGROUND LIKE EVERY OTHER SLIDE)
     # =========================================================================
     s1 = prs.slides.add_slide(blank_layout)
     bg1 = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(7.5))
     bg1.fill.solid()
-    bg1.fill.fore_color.rgb = NAVY
+    bg1.fill.fore_color.rgb = WHITE
     bg1.line.fill.background()
 
     # Blue top accent bar
-    top1 = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(0.2))
+    top1 = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(0.18))
     top1.fill.solid()
     top1.fill.fore_color.rgb = BLUE
     top1.line.fill.background()
 
-    tbox1 = s1.shapes.add_textbox(Inches(1.0), Inches(1.5), Inches(11.333), Inches(3.2))
+    tbox1 = s1.shapes.add_textbox(Inches(1.0), Inches(1.4), Inches(11.333), Inches(3.2))
     tf1 = tbox1.text_frame
     tf1.word_wrap = True
 
@@ -91,37 +91,37 @@ def build_presentation():
     p.text = "BCSE307L - COMPILER DESIGN LABORATORY PROJECT"
     p.font.size = Pt(15)
     p.font.bold = True
-    p.font.color.rgb = RGBColor(147, 197, 253)
-    p.space_after = Pt(12)
+    p.font.color.rgb = BLUE
+    p.space_after = Pt(14)
 
     p = tf1.add_paragraph()
     p.text = "TrafficRule"
-    p.font.size = Pt(54)
+    p.font.size = Pt(56)
     p.font.bold = True
-    p.font.color.rgb = WHITE
+    p.font.color.rgb = NAVY
     p.space_after = Pt(14)
 
     p = tf1.add_paragraph()
     p.text = "A Domain-Specific Language and Compiler for Traffic Rule Enforcement"
     p.font.size = Pt(22)
-    p.font.color.rgb = RGBColor(203, 213, 225)
+    p.font.color.rgb = DARK_TEXT
 
-    # Student details card
-    add_card(s1, 1.0, 5.0, 11.333, 1.6, fill_color=RGBColor(30, 41, 59), border_color=RGBColor(51, 65, 85))
-    cbox1 = s1.shapes.add_textbox(Inches(1.4), Inches(5.25), Inches(10.5), Inches(1.1))
+    # Student details card (clean light gray card on white background)
+    add_card(s1, 1.0, 4.9, 11.333, 1.7, fill_color=LIGHT_BG, border_color=BORDER_COLOR)
+    cbox1 = s1.shapes.add_textbox(Inches(1.4), Inches(5.15), Inches(10.5), Inches(1.2))
     ctf1 = cbox1.text_frame
     
     p = ctf1.paragraphs[0]
     p.text = "Student Name: Alan James     |     Register No: 24BCT0181"
-    p.font.size = Pt(18)
+    p.font.size = Pt(20)
     p.font.bold = True
-    p.font.color.rgb = WHITE
+    p.font.color.rgb = NAVY
     p.space_after = Pt(8)
 
     p = ctf1.add_paragraph()
     p.text = "Course: BCSE307L Compiler Design Lab     |     Review: Project Review 1 (Phase 1)"
-    p.font.size = Pt(15)
-    p.font.color.rgb = RGBColor(148, 163, 184)
+    p.font.size = Pt(16)
+    p.font.color.rgb = DARK_TEXT
 
     # =========================================================================
     # SLIDE 2: CHAPTER 1 - INTRODUCTION & MOTIVATION
@@ -129,7 +129,7 @@ def build_presentation():
     s2 = prs.slides.add_slide(blank_layout)
     add_header(s2, "Chapter 1", "Introduction & Motivation")
 
-    # Left: Background & Problem Area
+    # Left: Background & Concept
     add_card(s2, 0.8, 1.55, 5.6, 5.4)
     b2_1 = s2.shapes.add_textbox(Inches(1.1), Inches(1.8), Inches(5.0), Inches(4.9))
     tf = b2_1.text_frame
@@ -366,7 +366,6 @@ def build_presentation():
     s6 = prs.slides.add_slide(blank_layout)
     add_header(s6, "Chapter 5", "Complete Compiler Architecture (lab5.pdf Figure 1)")
 
-    # Flowchart visualization: 8 connected horizontal cards
     pipeline = [
         ("Source Program", "*.tr file\nspeed = 75", BLUE),
         ("Lexer", "lexer.c\nToken Stream", NAVY),
@@ -683,84 +682,199 @@ def build_presentation():
         p.space_after = Pt(8)
 
     # =========================================================================
-    # SLIDE 11: CHAPTER 9 - TESTING & RESULTS
+    # SLIDE 11: CHAPTER 9 - PROTOTYPE OUTPUTS (LEXER & PARSER ONLY)
     # =========================================================================
     s11 = prs.slides.add_slide(blank_layout)
-    add_header(s11, "Chapter 9", "Testing & Prototype Results (Review 1)")
+    add_header(s11, "Chapter 9", "Review 1 Prototype Outputs: Lexer & Parser")
 
-    # Left: Test Matrix
+    # Left: Lexer Output (Tokens)
     add_card(s11, 0.8, 1.55, 5.6, 5.4)
     b11_1 = s11.shapes.add_textbox(Inches(1.1), Inches(1.8), Inches(5.0), Inches(4.9))
-    tf = b11_1.text_frame
-    tf.word_wrap = True
+    tf11_1 = b11_1.text_frame
+    tf11_1.word_wrap = True
     
-    p = tf.paragraphs[0]
-    p.text = "Test Matrix Verification (4/4 Passed)"
-    p.font.size = Pt(19)
+    p = tf11_1.paragraphs[0]
+    p.text = "1. Lexical Analyzer Output (--tokens)"
+    p.font.size = Pt(17)
     p.font.bold = True
     p.font.color.rgb = NAVY
-    p.space_after = Pt(12)
+    p.space_after = Pt(4)
 
-    tests = [
-        ("Test 1: sample1_speed.tr", "Speed limit condition verified. Token stream and AST generated accurately.", GREEN),
-        ("Test 2: sample2_compound.tr", "Compound AND expression verified. Nested binary AST generated.", GREEN),
-        ("Test 3: Lexical Error Catching", "Input '@' symbol properly caught with line 3, col 12 error diagnostics.", GREEN),
-        ("Test 4: Syntax Error Catching", "Malformed 'IF speed > {' caught with line 5 missing operand diagnostics.", GREEN)
-    ]
-    for name, desc, col in tests:
-        p = tf.add_paragraph()
-        p.text = "✔ " + name
-        p.font.size = Pt(15.5)
-        p.font.bold = True
-        p.font.color.rgb = col
-        p2 = tf.add_paragraph()
-        p2.text = "    " + desc
-        p2.font.size = Pt(13.5)
-        p2.font.color.rgb = DARK_TEXT
-        p2.space_after = Pt(6)
+    p = tf11_1.add_paragraph()
+    p.text = "Input: examples/sample1.tr (speed = 75, IF speed > 60)"
+    p.font.size = Pt(12)
+    p.font.color.rgb = BLUE
+    p.space_after = Pt(8)
 
-    # Right: AST Prototype output
+    lexer_table = (
+        "+----+--------------------+------------+------+-----+\n"
+        "| #  | Token Type         | Lexeme     | Line | Col |\n"
+        "+----+--------------------+------------+------+-----+\n"
+        "| 1  | KEYWORD(VEHICLE)   | VEHICLE    | 2    | 1   |\n"
+        "| 2  | IDENTIFIER         | car        | 2    | 9   |\n"
+        "| 3  | IDENTIFIER         | speed      | 4    | 1   |\n"
+        "| 4  | ASSIGN(=)          | =          | 4    | 7   |\n"
+        "| 5  | NUMBER             | 75         | 4    | 9   |\n"
+        "| 6  | KEYWORD(IF)        | IF         | 6    | 1   |\n"
+        "| 7  | IDENTIFIER         | speed      | 6    | 4   |\n"
+        "| 8  | OPERATOR(>)        | >          | 6    | 10  |\n"
+        "| 9  | NUMBER             | 60         | 6    | 12  |\n"
+        "| 10 | DELIMITER({)       | {          | 6    | 15  |\n"
+        "| 11 | ACTION(ISSUE_FINE) | ISSUE_FINE | 7    | 5   |\n"
+        "| 12 | DELIMITER(})       | }          | 8    | 1   |\n"
+        "+----+--------------------+------------+------+-----+\n"
+        "Total Tokens: 13 | Lexical Status: PASS (0 errors)"
+    )
+    p = tf11_1.add_paragraph()
+    p.text = lexer_table
+    p.font.size = Pt(10.5)
+    p.font.name = "Consolas"
+    p.font.color.rgb = NAVY
+
+    # Right: Parser Output (AST)
     add_card(s11, 6.8, 1.55, 5.7, 5.4)
     b11_2 = s11.shapes.add_textbox(Inches(7.1), Inches(1.8), Inches(5.1), Inches(4.9))
-    tf = b11_2.text_frame
-    tf.word_wrap = True
+    tf11_2 = b11_2.text_frame
+    tf11_2.word_wrap = True
     
-    p = tf.paragraphs[0]
-    p.text = "Generated AST Output (Sample 1)"
-    p.font.size = Pt(19)
+    p = tf11_2.paragraphs[0]
+    p.text = "2. Syntax Analyzer Output (--ast)"
+    p.font.size = Pt(17)
     p.font.bold = True
     p.font.color.rgb = NAVY
-    p.space_after = Pt(10)
+    p.space_after = Pt(4)
+
+    p = tf11_2.add_paragraph()
+    p.text = "Generated Abstract Syntax Tree (Hierarchical AST)"
+    p.font.size = Pt(12)
+    p.font.color.rgb = BLUE
+    p.space_after = Pt(8)
 
     ast_text = (
-        "Program (3 statements)\n"
-        "  Declaration: VEHICLE car\n"
-        "  Assignment: speed =\n"
-        "    LiteralInt: 75\n"
-        "  IF Statement\n"
-        "    [Condition]:\n"
-        "      BinaryOp: >\n"
-        "        Identifier: speed\n"
-        "        LiteralInt: 60\n"
-        "    [Then Block]:\n"
-        "      Program (1 statements)\n"
-        "        Action: ISSUE_FINE"
+        "STAGE 2: Syntax Analysis & Abstract Syntax Tree\n"
+        "===============================================\n"
+        "AST Structure:\n"
+        "  Program (3 statements)\n"
+        "    Declaration: VEHICLE car\n"
+        "    Assignment: speed =\n"
+        "      LiteralInt: 75\n"
+        "    IF Statement\n"
+        "      [Condition]:\n"
+        "        BinaryOp: >\n"
+        "          Identifier: speed\n"
+        "          LiteralInt: 60\n"
+        "      [Then Block]:\n"
+        "        Program (1 statements)\n"
+        "          Action: ISSUE_FINE\n"
+        "\n"
+        ">>> Parsing Completed Successfully (0 errors) <<<"
     )
-    p = tf.add_paragraph()
+    p = tf11_2.add_paragraph()
     p.text = ast_text
-    p.font.size = Pt(12.5)
+    p.font.size = Pt(11)
     p.font.name = "Consolas"
     p.font.color.rgb = NAVY
 
     # =========================================================================
-    # SLIDE 12: CHAPTER 10 - CONCLUSION
+    # SLIDE 12: CHAPTER 9 (CONT.) - PROTOTYPE ERROR DIAGNOSTICS (LEXER & PARSER)
     # =========================================================================
     s12 = prs.slides.add_slide(blank_layout)
-    add_header(s12, "Chapter 10", "Conclusion")
+    add_header(s12, "Chapter 9", "Review 1 Prototype: Error Detection Outputs")
 
-    add_card(s12, 0.8, 1.55, 11.7, 5.4)
-    b12 = s12.shapes.add_textbox(Inches(1.1), Inches(1.8), Inches(11.1), Inches(4.9))
-    tf = b12.text_frame
+    # Left: Lexical Error Output
+    add_card(s12, 0.8, 1.55, 5.6, 5.4)
+    b12_1 = s12.shapes.add_textbox(Inches(1.1), Inches(1.8), Inches(5.0), Inches(4.9))
+    tf12_1 = b12_1.text_frame
+    tf12_1.word_wrap = True
+
+    p = tf12_1.paragraphs[0]
+    p.text = "Lexical Error Detection"
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = NAVY
+    p.space_after = Pt(6)
+
+    p = tf12_1.add_paragraph()
+    p.text = "Input: err_lexical.tr (Invalid character '@')"
+    p.font.size = Pt(13)
+    p.font.bold = True
+    p.font.color.rgb = RED
+    p.space_after = Pt(10)
+
+    err_lex_text = (
+        "Source Line:\n"
+        "  speed = 75 @ 20\n"
+        "             ^\n"
+        "\n"
+        "Compiler Diagnostic Output:\n"
+        "[LEXICAL ERROR]\n"
+        "  File: examples/err_lexical.tr\n"
+        "  Line: 3, Column: 12\n"
+        "  Message: Unrecognized character '@'\n"
+        "\n"
+        "Result:\n"
+        "  Scanner halts gracefully;\n"
+        "  Reports exact line and column;\n"
+        "  Prevents corrupted tokens from reaching parser."
+    )
+    p = tf12_1.add_paragraph()
+    p.text = err_lex_text
+    p.font.size = Pt(11.5)
+    p.font.name = "Consolas"
+    p.font.color.rgb = DARK_TEXT
+
+    # Right: Syntax Error Output
+    add_card(s12, 6.8, 1.55, 5.7, 5.4)
+    b12_2 = s12.shapes.add_textbox(Inches(7.1), Inches(1.8), Inches(5.1), Inches(4.9))
+    tf12_2 = b12_2.text_frame
+    tf12_2.word_wrap = True
+
+    p = tf12_2.paragraphs[0]
+    p.text = "Syntax Error Detection"
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = NAVY
+    p.space_after = Pt(6)
+
+    p = tf12_2.add_paragraph()
+    p.text = "Input: err_syntax.tr (Missing condition operand)"
+    p.font.size = Pt(13)
+    p.font.bold = True
+    p.font.color.rgb = RED
+    p.space_after = Pt(10)
+
+    err_syn_text = (
+        "Source Line:\n"
+        "  IF speed > {\n"
+        "             ^\n"
+        "\n"
+        "Compiler Diagnostic Output:\n"
+        "[SYNTAX ERROR]\n"
+        "  File: examples/err_syntax.tr\n"
+        "  Line: 5, Column: 14\n"
+        "  Message: Expected comparison value after '>'\n"
+        "  Found:   DELIMITER '{'\n"
+        "\n"
+        "Result:\n"
+        "  Predictive LL(1) parser catches grammar violation;\n"
+        "  Aborts AST construction cleanly;\n"
+        "  Outputs line/column position."
+    )
+    p = tf12_2.add_paragraph()
+    p.text = err_syn_text
+    p.font.size = Pt(11.5)
+    p.font.name = "Consolas"
+    p.font.color.rgb = DARK_TEXT
+
+    # =========================================================================
+    # SLIDE 13: CHAPTER 10 - CONCLUSION
+    # =========================================================================
+    s13 = prs.slides.add_slide(blank_layout)
+    add_header(s13, "Chapter 10", "Conclusion")
+
+    add_card(s13, 0.8, 1.55, 11.7, 5.4)
+    b13 = s13.shapes.add_textbox(Inches(1.1), Inches(1.8), Inches(11.1), Inches(4.9))
+    tf = b13.text_frame
     tf.word_wrap = True
     
     p = tf.paragraphs[0]
@@ -785,10 +899,10 @@ def build_presentation():
         p.space_after = Pt(12)
 
     # =========================================================================
-    # SLIDE 13: CHAPTER 11 - FUTURE ENHANCEMENTS
+    # SLIDE 14: CHAPTER 11 - FUTURE ENHANCEMENTS
     # =========================================================================
-    s13 = prs.slides.add_slide(blank_layout)
-    add_header(s13, "Chapter 11", "Future Enhancements (Project Roadmap)")
+    s14 = prs.slides.add_slide(blank_layout)
+    add_header(s14, "Chapter 11", "Future Enhancements (Project Roadmap)")
 
     f_cards = [
         ("Phase 2: Semantic Analysis", BLUE, [
@@ -812,8 +926,8 @@ def build_presentation():
     ]
     for idx, (title, col, items) in enumerate(f_cards):
         x = 0.8 + idx * (col_w + gap)
-        add_card(s13, x, 1.55, col_w, 5.4)
-        box = s13.shapes.add_textbox(Inches(x + 0.2), Inches(1.8), Inches(col_w - 0.4), Inches(4.9))
+        add_card(s14, x, 1.55, col_w, 5.4)
+        box = s14.shapes.add_textbox(Inches(x + 0.2), Inches(1.8), Inches(col_w - 0.4), Inches(4.9))
         tf = box.text_frame
         tf.word_wrap = True
         
@@ -832,15 +946,15 @@ def build_presentation():
             p.space_after = Pt(10)
 
     # =========================================================================
-    # SLIDE 14: REFERENCES & APPENDIX
+    # SLIDE 15: REFERENCES & APPENDIX
     # =========================================================================
-    s14 = prs.slides.add_slide(blank_layout)
-    add_header(s14, "Sections 20 & 21", "References & Appendix")
+    s15 = prs.slides.add_slide(blank_layout)
+    add_header(s15, "Sections 20 & 21", "References & Appendix")
 
     # Left: References
-    add_card(s14, 0.8, 1.55, 5.6, 5.4)
-    b14_1 = s14.shapes.add_textbox(Inches(1.1), Inches(1.8), Inches(5.0), Inches(4.9))
-    tf = b14_1.text_frame
+    add_card(s15, 0.8, 1.55, 5.6, 5.4)
+    b15_1 = s15.shapes.add_textbox(Inches(1.1), Inches(1.8), Inches(5.0), Inches(4.9))
+    tf = b15_1.text_frame
     tf.word_wrap = True
     
     p = tf.paragraphs[0]
@@ -864,9 +978,9 @@ def build_presentation():
         p.space_after = Pt(8)
 
     # Right: Appendix & Q&A
-    add_card(s14, 6.8, 1.55, 5.7, 5.4)
-    b14_2 = s14.shapes.add_textbox(Inches(7.1), Inches(1.8), Inches(5.1), Inches(4.9))
-    tf = b14_2.text_frame
+    add_card(s15, 6.8, 1.55, 5.7, 5.4)
+    b15_2 = s15.shapes.add_textbox(Inches(7.1), Inches(1.8), Inches(5.1), Inches(4.9))
+    tf = b15_2.text_frame
     tf.word_wrap = True
     
     p = tf.paragraphs[0]
@@ -878,9 +992,9 @@ def build_presentation():
 
     cmds = [
         ("Build Compiler", ".\\build.bat"),
-        ("Print Tokens", ".\\trafficrule.exe --tokens examples\\sample1_speed.tr"),
-        ("Print AST", ".\\trafficrule.exe --ast examples\\sample1_speed.tr"),
-        ("Run All Stages", ".\\trafficrule.exe --all examples\\sample1_speed.tr"),
+        ("Print Tokens", ".\\trafficrule.exe --tokens examples\\sample1.tr"),
+        ("Print AST", ".\\trafficrule.exe --ast examples\\sample1.tr"),
+        ("Run All Stages", ".\\trafficrule.exe --all examples\\sample1.tr"),
         ("Run Test Matrix", ".\\test_all.ps1")
     ]
     for label, cmd_str in cmds:
@@ -907,14 +1021,8 @@ def build_presentation():
 
     # Save presentation
     output_file = "TrafficRule_Presentation.pptx"
-    try:
-        prs.save(output_file)
-        print(f"Presentation successfully created: {output_file} ({len(prs.slides)} slides)")
-    except PermissionError:
-        output_file = "TrafficRule_Presentation_v2.pptx"
-        prs.save(output_file)
-        print(f"Note: TrafficRule_Presentation.pptx is currently open in PowerPoint (locked).")
-        print(f"Presentation successfully created as: {output_file} ({len(prs.slides)} slides)")
+    prs.save(output_file)
+    print(f"Presentation successfully created: {output_file} ({len(prs.slides)} slides)")
 
 if __name__ == "__main__":
     build_presentation()
