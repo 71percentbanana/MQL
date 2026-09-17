@@ -1,0 +1,3 @@
+# Lexical Error Test: Invalid character '@'
+VEHICLE car
+speed = 75 @

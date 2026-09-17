@@ -1,0 +1,8 @@
+# Sample 1: Speed Violation Rule
+VEHICLE car
+
+speed = 75
+
+IF speed > 60 {
+    ISSUE_FINE
+}

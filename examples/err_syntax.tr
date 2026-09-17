@@ -1,0 +1,7 @@
+# Syntax Error Test: Incomplete comparison expression in condition
+VEHICLE car
+speed = 75
+
+IF speed > {
+    ISSUE_FINE
+}

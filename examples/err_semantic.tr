@@ -1,0 +1,7 @@
+# Semantic Error Test: Type mismatch comparing integer variable with traffic state
+VEHICLE car
+speed = 75
+
+IF speed == RED {
+    ISSUE_FINE
+}

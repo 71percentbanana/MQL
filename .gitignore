@@ -1,0 +1,8 @@
+# Compiled executables
+*.exe
+*.o
+*.obj
+
+# Temporary files
+*.tmp
+*.log

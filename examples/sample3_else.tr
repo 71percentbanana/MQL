@@ -1,0 +1,11 @@
+# Sample 3: Conditional Branching with ELSE and ALLOW
+VEHICLE sedan
+
+speed = 45
+signal = GREEN
+
+IF speed > 60 {
+    ISSUE_FINE
+} ELSE {
+    ALLOW
+}
