@@ -1,6 +1,4 @@
-#include "common.h"
 #include "lexer.h"
-#include "ast.h"
 #include "parser.h"
 
 static char* read_entire_file(const char* filepath) {

@@ -1,5 +1,37 @@
 #include "lexer.h"
 
+const char* token_type_to_str(TokenType type) {
+    switch (type) {
+        case TOKEN_EOF: return "EOF";
+        case TOKEN_ERROR: return "ERROR";
+        case TOKEN_KW_VEHICLE: return "KEYWORD(VEHICLE)";
+        case TOKEN_KW_IF: return "KEYWORD(IF)";
+        case TOKEN_KW_ELSE: return "KEYWORD(ELSE)";
+        case TOKEN_KW_AND: return "KEYWORD(AND)";
+        case TOKEN_KW_OR: return "KEYWORD(OR)";
+        case TOKEN_ACT_ISSUE_FINE: return "ACTION(ISSUE_FINE)";
+        case TOKEN_ACT_FLAG_VIOLATION: return "ACTION(FLAG_VIOLATION)";
+        case TOKEN_ACT_ALLOW: return "ACTION(ALLOW)";
+        case TOKEN_STATE_RED: return "STATE(RED)";
+        case TOKEN_STATE_GREEN: return "STATE(GREEN)";
+        case TOKEN_STATE_YELLOW: return "STATE(YELLOW)";
+        case TOKEN_STATE_CROSSING: return "STATE(CROSSING)";
+        case TOKEN_STATE_ROAD: return "STATE(ROAD)";
+        case TOKEN_IDENTIFIER: return "IDENTIFIER";
+        case TOKEN_NUMBER: return "NUMBER";
+        case TOKEN_ASSIGN: return "ASSIGN(=)";
+        case TOKEN_OP_GT: return "OPERATOR(>)";
+        case TOKEN_OP_LT: return "OPERATOR(<)";
+        case TOKEN_OP_GTE: return "OPERATOR(>=)";
+        case TOKEN_OP_LTE: return "OPERATOR(<=)";
+        case TOKEN_OP_EQ: return "OPERATOR(==)";
+        case TOKEN_OP_NEQ: return "OPERATOR(!=)";
+        case TOKEN_LBRACE: return "DELIMITER({)";
+        case TOKEN_RBRACE: return "DELIMITER(})";
+        default: return "UNKNOWN";
+    }
+}
+
 void lexer_init(Lexer* lexer, const char* source) {
     lexer->source = source;
     lexer->length = source ? strlen(source) : 0;
@@ -16,8 +48,6 @@ static char peek_char(Lexer* lexer) {
     if (lexer->cursor >= lexer->length) return '\0';
     return lexer->source[lexer->cursor];
 }
-
-
 
 static char advance_char(Lexer* lexer) {
     if (lexer->cursor >= lexer->length) return '\0';
@@ -37,7 +67,6 @@ static void skip_whitespace_and_comments(Lexer* lexer) {
         if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
             advance_char(lexer);
         } else if (c == '#') {
-            // Line comment, skip until newline or EOF
             while (lexer->cursor < lexer->length && peek_char(lexer) != '\n') {
                 advance_char(lexer);
             }
@@ -83,42 +112,21 @@ Token lexer_next_token(Lexer* lexer) {
         token.line = start_line;
         token.col = start_col;
 
-        // Check keywords
-        if (strcmp(token.lexeme, "VEHICLE") == 0) {
-            token.type = TOKEN_KW_VEHICLE;
-        } else if (strcmp(token.lexeme, "IF") == 0) {
-            token.type = TOKEN_KW_IF;
-        } else if (strcmp(token.lexeme, "ELSE") == 0) {
-            token.type = TOKEN_KW_ELSE;
-        } else if (strcmp(token.lexeme, "AND") == 0) {
-            token.type = TOKEN_KW_AND;
-        } else if (strcmp(token.lexeme, "OR") == 0) {
-            token.type = TOKEN_KW_OR;
-        }
-        // Actions
-        else if (strcmp(token.lexeme, "ISSUE_FINE") == 0) {
-            token.type = TOKEN_ACT_ISSUE_FINE;
-        } else if (strcmp(token.lexeme, "FLAG_VIOLATION") == 0) {
-            token.type = TOKEN_ACT_FLAG_VIOLATION;
-        } else if (strcmp(token.lexeme, "ALLOW") == 0) {
-            token.type = TOKEN_ACT_ALLOW;
-        }
-        // States
-        else if (strcmp(token.lexeme, "RED") == 0) {
-            token.type = TOKEN_STATE_RED;
-        } else if (strcmp(token.lexeme, "GREEN") == 0) {
-            token.type = TOKEN_STATE_GREEN;
-        } else if (strcmp(token.lexeme, "YELLOW") == 0) {
-            token.type = TOKEN_STATE_YELLOW;
-        } else if (strcmp(token.lexeme, "CROSSING") == 0) {
-            token.type = TOKEN_STATE_CROSSING;
-        } else if (strcmp(token.lexeme, "ROAD") == 0) {
-            token.type = TOKEN_STATE_ROAD;
-        }
-        // General identifier
-        else {
-            token.type = TOKEN_IDENTIFIER;
-        }
+        if (strcmp(token.lexeme, "VEHICLE") == 0) token.type = TOKEN_KW_VEHICLE;
+        else if (strcmp(token.lexeme, "IF") == 0) token.type = TOKEN_KW_IF;
+        else if (strcmp(token.lexeme, "ELSE") == 0) token.type = TOKEN_KW_ELSE;
+        else if (strcmp(token.lexeme, "AND") == 0) token.type = TOKEN_KW_AND;
+        else if (strcmp(token.lexeme, "OR") == 0) token.type = TOKEN_KW_OR;
+        else if (strcmp(token.lexeme, "ISSUE_FINE") == 0) token.type = TOKEN_ACT_ISSUE_FINE;
+        else if (strcmp(token.lexeme, "FLAG_VIOLATION") == 0) token.type = TOKEN_ACT_FLAG_VIOLATION;
+        else if (strcmp(token.lexeme, "ALLOW") == 0) token.type = TOKEN_ACT_ALLOW;
+        else if (strcmp(token.lexeme, "RED") == 0) token.type = TOKEN_STATE_RED;
+        else if (strcmp(token.lexeme, "GREEN") == 0) token.type = TOKEN_STATE_GREEN;
+        else if (strcmp(token.lexeme, "YELLOW") == 0) token.type = TOKEN_STATE_YELLOW;
+        else if (strcmp(token.lexeme, "CROSSING") == 0) token.type = TOKEN_STATE_CROSSING;
+        else if (strcmp(token.lexeme, "ROAD") == 0) token.type = TOKEN_STATE_ROAD;
+        else token.type = TOKEN_IDENTIFIER;
+
         return token;
     }
 

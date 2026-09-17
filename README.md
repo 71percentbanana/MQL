@@ -38,10 +38,8 @@ powershell -ExecutionPolicy Bypass -File .\test_all.ps1
 
 ## Project Structure
 - `src/`
-  - `common.h` / `common.c` : Shared token types and string utilities
-  - `lexer.h` / `lexer.c`   : Lexical analyzer (token recognition, line/col tracking, lexical error reporting)
-  - `ast.h` / `ast.c`       : Abstract Syntax Tree node definitions, constructors, and ASCII tree visualizer
-  - `parser.h` / `parser.c` : Top-down predictive recursive descent parser and syntax error reporting
+  - `lexer.h` / `lexer.c`   : Lexical analyzer (token definitions, scanner, line/col tracking, lexical error reporting)
+  - `parser.h` / `parser.c` : Top-down predictive recursive descent parser, AST tree definitions, and syntax error reporting
   - `main.c`                : CLI driver orchestrating the Lexer and Parser
 - `examples/`
   - `sample1.tr`    : Speed violation rule

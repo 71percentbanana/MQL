@@ -33,48 +33,32 @@ powershell -ExecutionPolicy Bypass -File .\test_all.ps1
 
 ## 2. File-by-File Code Walkthrough
 
-### `src/common.h` & `src/common.c`
-* **Purpose:** The Shared Dictionary.
-* Contains the `TokenType` enum (lists all keywords `VEHICLE`, `IF`, `ELSE`, `AND`, `OR`, traffic states `RED`, `GREEN`, and operators `==`, `>`, etc.).
-* Contains the `Token` struct (`type`, `lexeme`, `int_val`, `line`, `col`).
-* `common.c` contains string conversion helper functions.
+### `src/lexer.h` & `src/lexer.c` (Phase 1: Lexical Analyzer / Scanner)
+* **What it contains:**
+  * Defines the `TokenType` enum (lists all keywords `VEHICLE`, `IF`, `ELSE`, `AND`, `OR`, traffic states `RED`, `GREEN`, and operators `==`, `>`, etc.).
+  * Defines the `Token` struct (`type`, `lexeme`, `int_val`, `line`, `col`).
+  * `advance_char()`: Reads the next character, tracks line and column numbers.
+  * `skip_whitespace_and_comments()`: Skips spaces, tabs, newlines, and `#` comments.
+  * `lexer_next_token()`: The main scanner function that recognizes keywords, identifiers, numbers, and symbols, and flags `Lexical Error` on invalid characters.
 
 ---
 
-### `src/lexer.h` & `src/lexer.c` (Phase 1: Lexical Analysis)
-* **Purpose:** The Scanner. Reads characters from source code and outputs tokens.
-* **`advance_char()`**: Reads the next character, tracks line and column numbers.
-* **`skip_whitespace_and_comments()`**: Skips spaces, tabs, newlines, and `#` comments.
-* **`lexer_next_token()`**: Main function:
-  * Letters $\to$ collects word, checks against keywords/states/actions, otherwise marks as `TOKEN_IDENTIFIER`.
-  * Digits $\to$ collects digits, converts using `atoi()`, returns `TOKEN_NUMBER`.
-  * Symbols $\to$ identifies single and multi-character operators (`=`, `==`, `!=`, `>`, `<`, `>=`, `<=`, `{`, `}`).
-  * Unknown characters $\to$ raises a `Lexical Error` with exact line, column, and ASCII code.
+### `src/parser.h` & `src/parser.c` (Phase 2: Syntax Analyzer & AST)
+* **What it contains:**
+  * Defines the `ASTNode` struct (hierarchical tree nodes for statements, conditions, actions, and values).
+  * Top-down predictive recursive descent parser implementing the LL(1) grammar.
+  * `parse_statement()`: Dispatches to sub-parsers (`parse_declaration`, `parse_if_stmt`, `parse_assignment`, `parse_action`).
+  * `parse_if_stmt()` & `parse_block()`: Recursively parses `IF condition { statement* }`.
+  * `parse_condition()` & `parse_and_expr()`: Enforces operator precedence (`AND` binds tighter than `OR`).
+  * `ast_print()`: Recursively displays the visual tree hierarchy in the terminal.
+  * `consume()`: Checks syntax and reports exact syntax errors with line and column.
 
 ---
 
-### `src/ast.h` & `src/ast.c` (Syntax Tree Blueprint)
-* **Purpose:** Defines the tree data structure in memory.
-* **`ASTNode`**: Represents a node with a tagged union holding child pointers for statements, conditions, expressions, and actions.
-* **`ast_create_*()`**: Constructors that allocate heap memory for nodes.
-* **`ast_print()`**: Recursively prints the visual tree structure with indentation.
-* **`ast_free()`**: Recursively frees all tree memory to avoid memory leaks.
-
----
-
-### `src/parser.h` & `src/parser.c` (Phase 2: Syntax Analysis)
-* **Purpose:** Top-down Predictive Recursive Descent Parser. Checks grammar rules and builds the AST.
-* **`parse_statement()`**: Checks the current token to call `parse_declaration()`, `parse_if_stmt()`, `parse_assignment()`, or `parse_action()`.
-* **`parse_if_stmt()` & `parse_block()`**: Recursively parses `IF condition { statement* }`.
-* **`parse_condition()` & `parse_and_expr()`**: Enforces operator precedence (`AND` binds tighter than `OR`).
-* **`consume()`**: Verifies expected tokens; if missing, reports exact syntax error with line and column.
-
----
-
-### `src/main.c` (Driver)
-* Reads the command-line flags (`--tokens`, `--ast`, `--all`).
-* Reads the input source file into a buffer.
-* Drives Stage 1 (Lexer) and Stage 2 (Parser) sequentially.
+### `src/main.c` (Driver Program)
+* Accepts command-line flags (`--tokens`, `--ast`, `--all`).
+* Reads the `.tr` source file into a buffer.
+* Passes the source to the Lexer (Stage 1) and Parser (Stage 2).
 
 ---
 
