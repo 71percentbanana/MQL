@@ -95,6 +95,12 @@ int main(int argc, char* argv[]) {
 
         if (lexer_tokenize_all(source, &tokens, &token_count, lex_err, sizeof(lex_err)) != 0) {
             fprintf(stderr, "\n[FAILED] %s\n", lex_err);
+            fprintf(stderr, "\n======================================================================\n");
+            fprintf(stderr, "  FINAL VERIFICATION: GRAMMAR IS INVALID\n");
+            fprintf(stderr, "======================================================================\n");
+            fprintf(stderr, "  [X] Lexical Analysis : FAILED (Lexical Error Detected)\n");
+            fprintf(stderr, "  [X] Program Status   : INVALID GRAMMAR\n");
+            fprintf(stderr, "======================================================================\n");
             free(source);
             return 1;
         }
@@ -131,6 +137,13 @@ int main(int argc, char* argv[]) {
         print_header("2. Syntax Analysis (Parser)");
         fprintf(stderr, "\n[SYNTAX ERROR] Line %d, Col %d: %s\n",
                 parser.error_line, parser.error_col, parser.error_msg);
+        fprintf(stderr, "\n======================================================================\n");
+        fprintf(stderr, "  FINAL VERIFICATION: GRAMMAR IS INVALID\n");
+        fprintf(stderr, "======================================================================\n");
+        fprintf(stderr, "  [X] Syntax Analysis : FAILED (Grammar Violation at Line %d, Col %d)\n",
+                parser.error_line, parser.error_col);
+        fprintf(stderr, "  [X] Program Status  : INVALID GRAMMAR\n");
+        fprintf(stderr, "======================================================================\n");
         free(source);
         return 1;
     }
@@ -149,6 +162,12 @@ int main(int argc, char* argv[]) {
     ast_free(ast);
     free(source);
 
-    printf("\n>>> Parsing Completed Successfully <<<\n");
+    printf("\n======================================================================\n");
+    printf("  FINAL VERIFICATION: GRAMMAR IS VALID\n");
+    printf("======================================================================\n");
+    printf("  [PASS] Lexical Analysis : OK (All tokens valid)\n");
+    printf("  [PASS] Syntax Analysis  : OK (Conforms to LL(1) Grammar)\n");
+    printf("  [PASS] Grammar Status   : VALID TRAFFICRULE PROGRAM\n");
+    printf("======================================================================\n");
     return 0;
 }
