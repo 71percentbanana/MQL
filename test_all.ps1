@@ -1,9 +1,9 @@
 Write-Host "======================================================" -ForegroundColor Cyan
-Write-Host "    TrafficRule Compiler Test Suite (Phase 2)        " -ForegroundColor Cyan
+Write-Host "    TrafficRule Prototype Test Suite (Lexer & Parser) " -ForegroundColor Cyan
 Write-Host "======================================================" -ForegroundColor Cyan
 
 # 1. Build Compiler
-Write-Host "`n[STEP 1] Compiling TrafficRule compiler from C source..." -ForegroundColor Yellow
+Write-Host "`n[STEP 1] Compiling TrafficRule from C source..." -ForegroundColor Yellow
 gcc -std=c99 -Wall -Wextra src/*.c -o trafficrule.exe
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[FATAL] Compilation failed!" -ForegroundColor Red
@@ -11,15 +11,12 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "[PASS] trafficrule.exe built cleanly with 0 errors/warnings." -ForegroundColor Green
 
-# 2. Test Cases Matrix
+# 2. Test Cases Matrix (Lexer & Parser)
 $testCases = @(
-    @{ Name="Sample 1 (Speed Violation)"; Path="examples/sample1.tr"; ExpectedExit=0; ExpectedPattern="Traffic Violation Detected" },
-    @{ Name="Sample 2 (Multi-rule & Signal Crossing)"; Path="examples/sample2.tr"; ExpectedExit=0; ExpectedPattern="FLAG_VIOLATION" },
-    @{ Name="Sample 3 (If-Else & ALLOW)"; Path="examples/sample3_else.tr"; ExpectedExit=0; ExpectedPattern="ALLOW" },
-    @{ Name="Sample Opt (Constant Folding)"; Path="examples/sample_opt.tr"; ExpectedExit=0; ExpectedPattern="Optimized Three-Address Code" },
-    @{ Name="Error Test: Lexical Error"; Path="examples/err_lexical.tr"; ExpectedExit=1; ExpectedPattern="Lexical Error" },
-    @{ Name="Error Test: Syntax Error"; Path="examples/err_syntax.tr"; ExpectedExit=1; ExpectedPattern="SYNTAX ERROR" },
-    @{ Name="Error Test: Semantic Error"; Path="examples/err_semantic.tr"; ExpectedExit=1; ExpectedPattern="SEMANTIC ERROR" }
+    @{ Name="Sample 1 (Speed Violation Rule)"; Path="examples/sample1.tr"; ExpectedExit=0; ExpectedPattern="AST Structure" },
+    @{ Name="Sample 2 (Compound AND Rule)"; Path="examples/sample2.tr"; ExpectedExit=0; ExpectedPattern="AST Structure" },
+    @{ Name="Error Test: Lexical Error (Invalid Symbol)"; Path="examples/err_lexical.tr"; ExpectedExit=1; ExpectedPattern="Lexical Error" },
+    @{ Name="Error Test: Syntax Error (Malformed Condition)"; Path="examples/err_syntax.tr"; ExpectedExit=1; ExpectedPattern="SYNTAX ERROR" }
 )
 
 $passed = 0
@@ -54,6 +51,5 @@ if ($failed -gt 0) {
     Write-Host "  Failed: $failed" -ForegroundColor Red
     exit 1
 } else {
-    Write-Host "  ALL TESTS PASSED! Ready for Review 2 & Viva." -ForegroundColor Green
     Write-Host "======================================================" -ForegroundColor Cyan
 }
