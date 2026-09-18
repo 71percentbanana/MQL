@@ -1,6 +1,44 @@
-# TrafficRule: Domain-Specific Language (Lexer & Parser Prototype)
+# SQL2Mongo: SQL to MongoDB Query Compiler & Execution Engine
 
-Prototype implementation for **Review 1** (Course: **BCSE307L Compiler Design Laboratory**).
+A formal source-to-source query compiler (transpiler) and execution engine written in **C** with zero external dependencies. It translates declarative relational SQL queries into MongoDB Aggregation Pipelines (`db.collection.aggregate([ ... ])`) and executes them against in-memory JSON document collections to produce actual MongoDB query results.
+
+---
+
+## Compiler Architecture & Pipeline Stages
+
+```
+Input SQL Query (*.sql)
+       │
+       ▼
+1. Lexical Analysis (Scanner: sql_lexer.c)
+   └── Produces typed token stream with line & column tracking
+       │
+       ▼
+2. Syntax Analysis (Recursive Descent Parser: sql_parser.c)
+   └── Validates SQL grammar & builds Abstract Syntax Tree (AST: sql_ast.c)
+       │
+       ▼
+3. Symbol Table & Semantic Analysis (schema_table.c)
+   └── Validates collection schemas, field existence, and operand type compatibility
+       │
+       ▼
+4. Intermediate Code Generation (tac.c)
+   └── Generates Three-Address Code (TAC) and Quadruple Table (Op, Arg1, Arg2, Result)
+       │
+       ▼
+5. Code Optimization (optimizer.c)
+   └── Applies Predicate Pushdown, Column Pruning, and Compile-Time Constant Folding
+       │
+       ▼
+6. Target Code Generation (mongo_codegen.c)
+   └── Serializes AST to standard MongoDB Aggregation Pipeline JSON ($match, $sort, $limit, $project)
+       │
+       ▼
+7. Execution Engine (engine.c)
+   └── Filters, sorts, and projects JSON document collections, returning real MongoDB documents
+```
+
+---
 
 ## Quick Build & Run
 
@@ -8,9 +46,9 @@ Prototype implementation for **Review 1** (Course: **BCSE307L Compiler Design La
 ```cmd
 build.bat
 ```
-or manually:
+or manually with GCC:
 ```cmd
-gcc -std=c99 -Wall -Wextra src/*.c -o trafficrule.exe
+gcc -std=c99 -Wall -Wextra src/*.c -o sql2mongo.exe
 ```
 
 ### 2. Run Automated Test Suite
@@ -18,34 +56,52 @@ gcc -std=c99 -Wall -Wextra src/*.c -o trafficrule.exe
 powershell -ExecutionPolicy Bypass -File .\test_all.ps1
 ```
 
-### 3. Run Pipeline on Sample Files
+### 3. Run Pipeline on Sample Files or Inline Queries
 ```powershell
-# Show both Lexer (Tokens) and Parser (AST)
-.\trafficrule.exe examples/sample1.tr --all
+# Run complete end-to-end compiler pipeline on a file
+.\sql2mongo.exe examples/query1_basic.sql --all
 
-# Show Token Table only (Lexer)
-.\trafficrule.exe examples/sample1.tr --tokens
+# Run specific stage flags
+.\sql2mongo.exe examples/query1_basic.sql --tokens   # Scanner Token Table
+.\sql2mongo.exe examples/query1_basic.sql --ast      # Hierarchical AST
+.\sql2mongo.exe examples/query1_basic.sql --schema   # Symbol Table
+.\sql2mongo.exe examples/query1_basic.sql --tac      # Three-Address Code & Quadruples
+.\sql2mongo.exe examples/query1_basic.sql --opt      # Code Optimization Report
+.\sql2mongo.exe examples/query1_basic.sql --mongo    # Target MQL JSON
+.\sql2mongo.exe examples/query1_basic.sql --run      # In-Memory Execution Results
 
-# Show Abstract Syntax Tree only (Parser)
-.\trafficrule.exe examples/sample1.tr --ast
+# Execute direct inline SQL query string
+.\sql2mongo.exe "SELECT name, age FROM students WHERE age >= 20 ORDER BY age DESC LIMIT 2;" --all
 ```
 
-## Supported CLI Flags
-- `--tokens` : Display lexical tokens table
-- `--ast`    : Print hierarchical Abstract Syntax Tree
-- `--dot <f>`: Export AST to Graphviz DOT format
-- `--all`    : Run both Lexer and Parser (Default)
+---
 
 ## Project Structure
-- `src/`
-  - `lexer.h` / `lexer.c`   : Lexical analyzer (token definitions, scanner, line/col tracking, lexical error reporting)
-  - `parser.h` / `parser.c` : Top-down predictive recursive descent parser, AST tree definitions, and syntax error reporting
-  - `main.c`                : CLI driver orchestrating the Lexer and Parser
-- `examples/`
-  - `sample1.tr`    : Speed violation rule
-  - `sample2.tr`    : Compound AND signal crossing rule
-  - `err_lexical.tr`: Lexical error test case (unrecognized symbol)
-  - `err_syntax.tr` : Syntax error test case (malformed expression)
-- `test_all.ps1`    : Automated test suite
-- `build.bat`       : 1-click build script
-- `viva_preparation.md` : Viva questions and answers guide
+
+```
+compiler-project/
+├── README.md                    # Project documentation
+├── build.bat                    # 1-Click GCC build script
+├── test_all.ps1                 # Automated PowerShell test matrix
+├── data/                        # JSON document collections
+│   ├── students.json
+│   └── employees.json
+├── examples/                    # Sample test queries
+│   ├── query1_basic.sql         # SELECT, WHERE, ORDER BY, LIMIT
+│   ├── query2_compound.sql      # Multi-condition with AND
+│   ├── query3_wildcard.sql      # SELECT * wildcard projection
+│   ├── query4_or.sql            # Multi-condition with OR
+│   ├── err_syntax.sql           # Syntax error diagnostic test
+│   └── err_semantic.sql         # Semantic schema error diagnostic test
+└── src/                         # C compiler source code
+    ├── sql_lexer.h / .c         # Lexical scanner & token dictionary
+    ├── sql_ast.h / .c           # AST node definitions & ASCII tree visualizer
+    ├── sql_parser.h / .c        # Top-down recursive descent parser
+    ├── schema_table.h / .c      # Symbol table catalog & semantic type checker
+    ├── tac.h / .c               # Three-Address Code & Quadruple table
+    ├── optimizer.h / .c         # Constant folding & predicate pushdown
+    ├── query_plan.h / .c        # Relational algebra IR
+    ├── mongo_codegen.h / .c     # MongoDB Aggregation Pipeline JSON code generator
+    ├── engine.h / .c            # Document execution engine & result renderer
+    └── main.c                   # CLI orchestration driver
+```

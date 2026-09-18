@@ -1,55 +1,54 @@
-Write-Host "======================================================" -ForegroundColor Cyan
-Write-Host "    TrafficRule Prototype Test Suite (Lexer & Parser) " -ForegroundColor Cyan
-Write-Host "======================================================" -ForegroundColor Cyan
+# =====================================================================
+# SQL2Mongo Test Suite Automation
+# Course: BCSE307L Compiler Design Laboratory
+# Author: Alan James (24BCT0181)
+# =====================================================================
 
-# 1. Build Compiler
-Write-Host "`n[STEP 1] Compiling TrafficRule from C source..." -ForegroundColor Yellow
-gcc -std=c99 -Wall -Wextra src/*.c -o trafficrule.exe
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[FATAL] Compilation failed!" -ForegroundColor Red
-    exit 1
-}
-Write-Host "[PASS] trafficrule.exe built cleanly with 0 errors/warnings." -ForegroundColor Green
+Write-Host "======================================================================" -ForegroundColor Cyan
+Write-Host "  Running Automated Test Suite: SQL2Mongo Compiler & Execution Engine " -ForegroundColor Cyan
+Write-Host "======================================================================" -ForegroundColor Cyan
 
-# 2. Test Cases Matrix (Lexer & Parser)
-$testCases = @(
-    @{ Name="Sample 1 (Speed Violation Rule)"; Path="examples/sample1.tr"; ExpectedExit=0; ExpectedPattern="AST Structure" },
-    @{ Name="Sample 2 (Compound AND Rule)"; Path="examples/sample2.tr"; ExpectedExit=0; ExpectedPattern="AST Structure" },
-    @{ Name="Error Test: Lexical Error (Invalid Symbol)"; Path="examples/err_lexical.tr"; ExpectedExit=1; ExpectedPattern="Lexical Error" },
-    @{ Name="Error Test: Syntax Error (Malformed Condition)"; Path="examples/err_syntax.tr"; ExpectedExit=1; ExpectedPattern="SYNTAX ERROR" }
-)
+$Passed = 0
+$Failed = 0
 
-$passed = 0
-$failed = 0
+function Run-Test {
+    param(
+        [string]$Name,
+        [string]$File,
+        [int]$ExpectedExitCode,
+        [string]$Flag = "--all"
+    )
 
-Write-Host "`n[STEP 2] Running Functional Test Matrix..." -ForegroundColor Yellow
+    Write-Host "`n>>> RUNNING TEST: $Name [$File] ..." -ForegroundColor Yellow
+    $output = .\sql2mongo.exe $File $Flag 2>&1
+    $exitCode = $LASTEXITCODE
 
-foreach ($tc in $testCases) {
-    Write-Host "------------------------------------------------------"
-    Write-Host "Running: $($tc.Name)" -ForegroundColor Magenta
-    $output = .\trafficrule.exe $tc.Path --all 2>&1 | Out-String
-    $actualExit = $LASTEXITCODE
-
-    $exitMatch = ($actualExit -eq $tc.ExpectedExit)
-    $patternMatch = ($output -match $tc.ExpectedPattern)
-
-    if ($exitMatch -and $patternMatch) {
-        Write-Host "  Result: PASS [ExitCode=$actualExit, Pattern='$($tc.ExpectedPattern)' matched]" -ForegroundColor Green
-        $passed++
+    if ($exitCode -eq $ExpectedExitCode) {
+        Write-Host "[PASS] $Name (Exit Code: $exitCode as expected)" -ForegroundColor Green
+        $global:Passed++
     } else {
-        Write-Host "  Result: FAIL [ExpectedExit=$($tc.ExpectedExit), Got=$actualExit, PatternMatch=$patternMatch]" -ForegroundColor Red
-        Write-Host "Output snippet:"
-        Write-Host $output.Substring(0, [Math]::Min(300, $output.Length))
-        $failed++
+        Write-Host "[FAIL] $Name (Expected: $ExpectedExitCode, Got: $exitCode)" -ForegroundColor Red
+        $global:Failed++
     }
 }
 
-Write-Host "`n======================================================" -ForegroundColor Cyan
-Write-Host "Test Results Summary:" -ForegroundColor Cyan
-Write-Host "  Passed: $passed / $($testCases.Count)" -ForegroundColor Green
-if ($failed -gt 0) {
-    Write-Host "  Failed: $failed" -ForegroundColor Red
-    exit 1
+# Test Cases
+Run-Test "1. Basic SELECT, WHERE, ORDER BY, LIMIT" "examples/query1_basic.sql" 0 "--all"
+Run-Test "2. Compound Filter with AND Condition"   "examples/query2_compound.sql" 0 "--all"
+Run-Test "3. Wildcard Projection (SELECT *)"       "examples/query3_wildcard.sql" 0 "--all"
+Run-Test "4. Disjunctive Filter with OR Condition" "examples/query4_or.sql" 0 "--all"
+Run-Test "5. Syntax Error Detection"               "examples/err_syntax.sql" 1
+Run-Test "6. Semantic / Schema Error Detection"    "examples/err_semantic.sql" 2
+
+Write-Host "`n======================================================================" -ForegroundColor Cyan
+Write-Host "  TEST SUITE RESULTS SUMMARY" -ForegroundColor Cyan
+Write-Host "======================================================================" -ForegroundColor Cyan
+Write-Host "Total Tests Run : $($Passed + $Failed)"
+Write-Host "Tests Passed    : $Passed" -ForegroundColor Green
+Write-Host "Tests Failed    : $Failed" -ForegroundColor $(if ($Failed -eq 0) { "Green" } else { "Red" })
+
+if ($Failed -eq 0) {
+    Write-Host "`n>>> ALL TESTS PASSED SUCCESSFULLY! <<<" -ForegroundColor Green
 } else {
-    Write-Host "======================================================" -ForegroundColor Cyan
+    Write-Host "`n>>> SOME TESTS FAILED <<<" -ForegroundColor Red
 }

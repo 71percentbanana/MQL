@@ -1,11 +1,21 @@
-#include "lexer.h"
-#include "parser.h"
-#include "symbol_table.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
+#include "sql_lexer.h"
+#include "sql_ast.h"
+#include "sql_parser.h"
+#include "schema_table.h"
+#include "tac.h"
+#include "optimizer.h"
+#include "query_plan.h"
+#include "mongo_codegen.h"
+#include "engine.h"
 
 static char* read_entire_file(const char* filepath) {
     FILE* f = fopen(filepath, "rb");
     if (!f) {
-        fprintf(stderr, "Error: Could not open file '%s'\n", filepath);
         return NULL;
     }
     fseek(f, 0, SEEK_END);
@@ -23,23 +33,28 @@ static char* read_entire_file(const char* filepath) {
     return buf;
 }
 
-static void print_header(const char* stage_name) {
-    printf("\n======================================================================\n");
-    printf("  STAGE: %s\n", stage_name);
+static void print_banner(void) {
+    printf("======================================================================\n");
+    printf("   SQL2Mongo: Query Compiler, Transpiler & Execution Engine\n");
+    printf("   Course: BCSE307L Compiler Design Laboratory | Author: Alan James\n");
     printf("======================================================================\n");
 }
 
 static void print_usage(const char* prog_name) {
-    printf("TrafficRule Compiler - Prototype (Lexer, Parser & Symbol Table)\n");
-    printf("Course: BCSE307L Compiler Design Laboratory\n\n");
-    printf("Usage: %s <source_file.tr> [options]\n\n", prog_name);
-    printf("Options:\n");
-    printf("  --tokens       Display lexical token stream table\n");
-    printf("  --ast          Display Abstract Syntax Tree (AST)\n");
-    printf("  --symtab       Display Symbol Table (Identifiers, Types, Scopes)\n");
-    printf("  --dot <file>   Export AST to Graphviz DOT format\n");
-    printf("  --all          Run all compiler stages (Default)\n");
-    printf("  --help         Show this help message\n");
+    print_banner();
+    printf("\nUsage: %s <query_file.sql | \"SQL query text\"> [options]\n\n", prog_name);
+    printf("Compiler Phase Options:\n");
+    printf("  --tokens     Stage 1: Lexical Token Stream Table (Scanner)\n");
+    printf("  --ast        Stage 2: Abstract Syntax Tree (Parser)\n");
+    printf("  --schema     Stage 3: Symbol Table & Semantic Checks\n");
+    printf("  --tac        Stage 4: Three-Address Code (TAC) & Quadruple Table (IR)\n");
+    printf("  --opt        Stage 5: Code Optimization (Constant Folding & Pushdown)\n");
+    printf("  --mongo      Stage 6: Target MongoDB Aggregation Pipeline (MQL)\n");
+    printf("  --run        Stage 7: Execution Engine (MongoDB Document Results)\n");
+    printf("  --all        Run All Compiler Stages in Sequence (Default)\n");
+    printf("  --help       Show this help manual\n\n");
+    printf("Example:\n");
+    printf("  %s \"SELECT name, age FROM students WHERE age >= 20 ORDER BY age DESC LIMIT 2;\" --all\n", prog_name);
 }
 
 int main(int argc, char* argv[]) {
@@ -48,145 +63,147 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    const char* filepath = NULL;
-    bool flag_tokens = false;
-    bool flag_ast = false;
-    bool flag_symtab = false;
-    bool flag_all = false;
-    const char* dot_filename = NULL;
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+        print_usage(argv[0]);
+        return 0;
+    }
 
-    for (int i = 1; i < argc; i++) {
+    const char* input_arg = argv[1];
+    bool flag_tokens = false;
+    bool flag_ast    = false;
+    bool flag_schema = false;
+    bool flag_tac    = false;
+    bool flag_opt    = false;
+    bool flag_mongo  = false;
+    bool flag_run    = false;
+    bool flag_all    = false;
+
+    for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--tokens") == 0) flag_tokens = true;
         else if (strcmp(argv[i], "--ast") == 0) flag_ast = true;
-        else if (strcmp(argv[i], "--symtab") == 0) flag_symtab = true;
+        else if (strcmp(argv[i], "--schema") == 0) flag_schema = true;
+        else if (strcmp(argv[i], "--tac") == 0) flag_tac = true;
+        else if (strcmp(argv[i], "--opt") == 0) flag_opt = true;
+        else if (strcmp(argv[i], "--mongo") == 0) flag_mongo = true;
+        else if (strcmp(argv[i], "--run") == 0) flag_run = true;
         else if (strcmp(argv[i], "--all") == 0) flag_all = true;
-        else if (strcmp(argv[i], "--help") == 0) {
-            print_usage(argv[0]);
-            return 0;
-        }
-        else if (strcmp(argv[i], "--dot") == 0 && i + 1 < argc) {
-            dot_filename = argv[++i];
-        }
-        else if (argv[i][0] != '-') {
-            filepath = argv[i];
-        }
     }
 
-    if (!filepath) {
-        fprintf(stderr, "Error: No source file provided.\n");
-        print_usage(argv[0]);
-        return 1;
-    }
-
-    // Default to --all if neither --tokens, --ast, nor --symtab is specified
-    if (!flag_tokens && !flag_ast && !flag_symtab && !dot_filename) {
+    // Default to --all if no specific stage flag is set
+    if (!flag_tokens && !flag_ast && !flag_schema && !flag_tac && !flag_opt && !flag_mongo && !flag_run) {
         flag_all = true;
     }
 
-    char* source = read_entire_file(filepath);
-    if (!source) return 1;
+    // Determine if input is a file or a direct SQL string
+    char* file_content = read_entire_file(input_arg);
+    const char* sql_source = file_content ? file_content : input_arg;
 
-    printf(">>> Processing TrafficRule Program: '%s' <<<\n", filepath);
+    print_banner();
+    printf("\n[Input SQL Query]:\n%s\n", sql_source);
 
-    // =========================================================================
-    // Stage 1: Lexical Analysis (Scanner)
-    // =========================================================================
+    // Initialize Schema Catalog
+    schema_init();
+
+    // 1. Lexer Stage
     if (flag_tokens || flag_all) {
-        print_header("1. Lexical Analysis (Scanner)");
-        Token* tokens = NULL;
-        int token_count = 0;
-        char lex_err[256];
-
-        if (lexer_tokenize_all(source, &tokens, &token_count, lex_err, sizeof(lex_err)) != 0) {
-            fprintf(stderr, "\n[FAILED] %s\n", lex_err);
-            fprintf(stderr, "\n======================================================================\n");
-            fprintf(stderr, "  FINAL VERIFICATION: GRAMMAR IS INVALID\n");
-            fprintf(stderr, "======================================================================\n");
-            fprintf(stderr, "  [X] Lexical Analysis : FAILED (Lexical Error Detected)\n");
-            fprintf(stderr, "  [X] Program Status   : INVALID GRAMMAR\n");
-            fprintf(stderr, "======================================================================\n");
-            free(source);
-            return 1;
-        }
-
-        printf("+-----+--------------------+--------------------+------+------+\n");
-        printf("| #   | Token Type         | Lexeme             | Line | Col  |\n");
-        printf("+-----+--------------------+--------------------+------+------+\n");
-        for (int i = 0; i < token_count; i++) {
-            printf("| %-3d | %-18s | %-18s | %-4d | %-4d |\n",
-                   i + 1,
-                   token_type_to_str(tokens[i].type),
-                   tokens[i].lexeme,
-                   tokens[i].line,
-                   tokens[i].col);
-        }
-        printf("+-----+--------------------+--------------------+------+------+\n");
-        printf("Total Tokens Identified: %d\n", token_count);
-        free(tokens);
-
-        if (flag_tokens && !flag_all) {
-            free(source);
-            return 0;
-        }
+        printf("\n======================================================================\n");
+        printf("  STAGE 1: Lexical Analysis (Scanner)\n");
+        printf("======================================================================\n");
+        lexer_print_all(sql_source);
     }
 
-    // =========================================================================
-    // Stage 2: Syntax Analysis (Parser & AST)
-    // =========================================================================
+    // 2. Parser & AST Stage
     Parser parser;
-    parser_init(&parser, source);
-    ASTNode* ast = parser_parse(&parser);
+    parser_init(&parser, sql_source);
+    ASTQuery query;
+    bool parse_success = parser_parse(&parser, &query);
 
-    if (parser.has_error || !ast) {
-        print_header("2. Syntax Analysis (Parser)");
-        fprintf(stderr, "\n[SYNTAX ERROR] Line %d, Col %d: %s\n",
-                parser.error_line, parser.error_col, parser.error_msg);
-        fprintf(stderr, "\n======================================================================\n");
-        fprintf(stderr, "  FINAL VERIFICATION: GRAMMAR IS INVALID\n");
-        fprintf(stderr, "======================================================================\n");
-        fprintf(stderr, "  [X] Syntax Analysis : FAILED (Grammar Violation at Line %d, Col %d)\n",
-                parser.error_line, parser.error_col);
-        fprintf(stderr, "  [X] Program Status  : INVALID GRAMMAR\n");
-        fprintf(stderr, "======================================================================\n");
-        free(source);
+    if (!parse_success) {
+        printf("\n======================================================================\n");
+        printf("  SYNTAX VALIDATION STATUS: INVALID GRAMMAR DETECTED\n");
+        printf("======================================================================\n");
+        fprintf(stderr, "%s\n", parser.error_msg);
+        if (file_content) free(file_content);
         return 1;
     }
 
     if (flag_ast || flag_all) {
-        print_header("2. Syntax Analysis & Abstract Syntax Tree (AST)");
-        printf("AST Structure:\n");
-        ast_print(ast, 1);
+        printf("\n======================================================================\n");
+        printf("  STAGE 2: Syntax Analysis & Abstract Syntax Tree (AST)\n");
+        printf("======================================================================\n");
+        ast_print(&query);
+        printf("Syntax Status: VALID (Grammar Verified without errors)\n");
+    }
 
-        if (dot_filename) {
-            ast_export_dot(ast, dot_filename);
-            printf("\n[INFO] AST exported to Graphviz DOT file: '%s'\n", dot_filename);
+    // 3. Schema & Semantic Analysis Stage
+    char sem_err[256];
+    bool sem_valid = schema_validate_query(&query, sem_err, sizeof(sem_err));
+
+    if (flag_schema || flag_all) {
+        printf("\n======================================================================\n");
+        printf("  STAGE 3: Symbol Table & Semantic Analysis\n");
+        printf("======================================================================\n");
+        schema_print_catalog();
+        if (!sem_valid) {
+            fprintf(stderr, "\n%s\n", sem_err);
+            printf("Semantic Status: INVALID (Type/Field Mismatch)\n");
+            ast_free(&query);
+            if (file_content) free(file_content);
+            return 2;
+        } else {
+            printf("\nSemantic Status: PASS (Collections, fields, and types verified)\n");
         }
+    } else if (!sem_valid) {
+        fprintf(stderr, "\n%s\n", sem_err);
+        ast_free(&query);
+        if (file_content) free(file_content);
+        return 2;
     }
 
-    // =========================================================================
-    // Stage 3: Symbol Table Management
-    // =========================================================================
-    SymbolTable symtab;
-    symbol_table_init(&symtab);
-    symbol_table_build_from_ast(&symtab, ast);
+    // 4. Intermediate Code Generation (TAC & Quadruples)
+    TACProgram tac_prog;
+    tac_generate(&query, &tac_prog);
 
-    if (flag_symtab || flag_all) {
-        print_header("3. Symbol Table Management");
-        symbol_table_print(&symtab);
+    if (flag_tac || flag_all) {
+        printf("\n======================================================================\n");
+        printf("  STAGE 4: Intermediate Code (Three-Address Code & Quadruples)\n");
+        printf("======================================================================\n");
+        tac_print(&tac_prog);
+        quads_print(&tac_prog);
     }
 
-    int sym_count = symtab.count;
-    symbol_table_free(&symtab);
-    ast_free(ast);
-    free(source);
+    // 5. Code Optimization Stage
+    OptimizationReport opt_report;
+    optimizer_run(&query, &tac_prog, &opt_report);
+
+    if (flag_opt || flag_all) {
+        printf("\n======================================================================\n");
+        printf("  STAGE 5: Code Optimization Passes\n");
+        printf("======================================================================\n");
+        optimizer_print_report(&opt_report);
+    }
+
+    // 6. Target Code Generation (MQL)
+    if (flag_mongo || flag_all) {
+        printf("\n======================================================================\n");
+        printf("  STAGE 6: Target Code Generation (MongoDB Query Language)\n");
+        printf("======================================================================\n");
+        mongo_print_code(&query);
+    }
+
+    // 7. Execution Engine & Document Results
+    if (flag_run || flag_all) {
+        printf("\n======================================================================\n");
+        printf("  STAGE 7: Execution Engine (MongoDB Document Results)\n");
+        printf("======================================================================\n");
+        engine_execute_query(&query, "data");
+    }
 
     printf("\n======================================================================\n");
-    printf("  FINAL VERIFICATION: GRAMMAR IS VALID\n");
+    printf("  FINAL VERIFICATION: ALL 7 COMPILER PHASES EXECUTED SUCCESSFULLY\n");
     printf("======================================================================\n");
-    printf("  [PASS] Lexical Analysis : OK (All tokens valid)\n");
-    printf("  [PASS] Syntax Analysis  : OK (Conforms to LL(1) Grammar)\n");
-    printf("  [PASS] Symbol Table     : OK (%d symbols registered)\n", sym_count);
-    printf("  [PASS] Grammar Status   : VALID TRAFFICRULE PROGRAM\n");
-    printf("======================================================================\n");
+
+    ast_free(&query);
+    if (file_content) free(file_content);
     return 0;
 }

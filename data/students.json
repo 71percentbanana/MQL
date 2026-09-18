@@ -1,0 +1,7 @@
+[
+  { "name": "Alice Walker", "age": 22, "gpa": 3.85, "city": "Seattle", "status": "Active" },
+  { "name": "Bob Smith", "age": 21, "gpa": 3.40, "city": "Boston", "status": "Active" },
+  { "name": "Charlie Brown", "age": 19, "gpa": 3.90, "city": "Seattle", "status": "Probation" },
+  { "name": "Diana Prince", "age": 23, "gpa": 3.95, "city": "New York", "status": "Active" },
+  { "name": "Evan Wright", "age": 20, "gpa": 3.10, "city": "Chicago", "status": "Graduated" }
+]

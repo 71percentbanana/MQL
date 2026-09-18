@@ -1,8 +1,19 @@
-# Compiled executables
+# Compiled binaries & objects
 *.exe
 *.o
 *.obj
 
-# Temporary files
+# Temporary and lock files
 *.tmp
 *.log
+~$*
+
+# Documents, Presentations & PDFs (Do not commit)
+*.pdf
+*.pptx
+*report*
+*viva*
+generate_*.py
+
+# Backups
+backup_trafficrule/

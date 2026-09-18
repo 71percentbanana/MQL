@@ -1,0 +1,7 @@
+[
+  { "name": "Sarah Connor", "department": "Engineering", "salary": 95000.0, "experience": 6, "role": "Lead Dev" },
+  { "name": "John Doe", "department": "Engineering", "salary": 72000.0, "experience": 3, "role": "Software Engineer" },
+  { "name": "Jane Smith", "department": "Marketing", "salary": 65000.0, "experience": 4, "role": "Marketing Lead" },
+  { "name": "Michael Scott", "department": "Management", "salary": 85000.0, "experience": 10, "role": "Regional Manager" },
+  { "name": "Dwight Schrute", "department": "Sales", "salary": 58000.0, "experience": 5, "role": "Assistant Regional Manager" }
+]

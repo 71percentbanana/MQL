@@ -1,9 +1,0 @@
-# Sample Optimizer Test: Constant Expressions
-VEHICLE car
-
-speed = 85
-
-# 80 > 60 can be evaluated at compile-time by the optimizer
-IF 80 > 60 {
-    FLAG_VIOLATION
-}
