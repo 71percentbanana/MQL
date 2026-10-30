@@ -168,20 +168,34 @@ bool schema_validate_query(const ASTQuery* query, char* err_buf, size_t buf_sz) 
     return true;
 }
 
+static int data_type_width(DataType type) {
+    switch (type) {
+        case TYPE_INT:    return 4;
+        case TYPE_FLOAT:  return 8;
+        case TYPE_STRING: return 64;
+        default:          return 0;
+    }
+}
+
 void schema_print_catalog(void) {
-    printf("\nSymbol Table (Schema Catalog & Type Registry):\n");
-    printf("======================================================================\n");
-    printf("+----------------------+----------------------+----------------------+\n");
-    printf("| Collection Name      | Field Name           | Data Type            |\n");
-    printf("+----------------------+----------------------+----------------------+\n");
+    printf("\nSymbol Table (Schema Catalog, Scope Management & Type Registry):\n");
+    printf("========================================================================================\n");
+    printf("+-------+----------------------+----------------------+----------------------+---------+\n");
+    printf("| Scope | Collection (Entity)  | Field Symbol         | Data Type            | Width   |\n");
+    printf("+-------+----------------------+----------------------+----------------------+---------+\n");
+    int total_symbols = 0;
     for (int i = 0; i < g_catalog_count; i++) {
         for (int j = 0; j < g_catalog[i].field_count; j++) {
-            printf("| %-20s | %-20s | %-20s |\n",
+            total_symbols++;
+            printf("| %-5s | %-20s | %-20s | %-20s | %2d B   |\n",
+                   "Table",
                    g_catalog[i].collection_name,
                    g_catalog[i].fields[j].name,
-                   data_type_name(g_catalog[i].fields[j].type));
+                   data_type_name(g_catalog[i].fields[j].type),
+                   data_type_width(g_catalog[i].fields[j].type));
         }
     }
-    printf("+----------------------+----------------------+----------------------+\n");
-    printf("Total Collections: %d | Status: Catalog Verified\n", g_catalog_count);
+    printf("+-------+----------------------+----------------------+----------------------+---------+\n");
+    printf("Scope Level: 0 (Global Schema) | Collections: %d | Total Symbols: %d | Status: PASS\n",
+           g_catalog_count, total_symbols);
 }

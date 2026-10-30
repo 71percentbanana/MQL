@@ -15,5 +15,6 @@ typedef struct {
 
 void parser_init(Parser* parser, const char* source);
 bool parser_parse(Parser* parser, ASTQuery* query);
+void parse_tree_print(const ASTQuery* query);
 
 #endif // SQL_PARSER_H

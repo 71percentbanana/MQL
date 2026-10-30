@@ -132,6 +132,40 @@ void tac_generate(const ASTQuery* query, TACProgram* prog) {
     }
     snprintf(tac_buf, sizeof(tac_buf), "%s = PROJECT(%s, [%s])", proj_t, current_t, proj_arg);
     add_tac_quad(prog, "PROJECT", current_t, proj_arg, proj_t, tac_buf);
+
+    // Generate Triples Representation from Quadruples
+    prog->triple_count = prog->quad_count;
+    for (int i = 0; i < prog->quad_count; i++) {
+        Triple* tr = &prog->triples[i];
+        strncpy(tr->op, prog->quads[i].op, sizeof(tr->op) - 1);
+        tr->op[sizeof(tr->op) - 1] = '\0';
+
+        // Check if arg1 refers to a previous quad's result temporary
+        char a1[64];
+        strncpy(a1, prog->quads[i].arg1, sizeof(a1) - 1);
+        a1[sizeof(a1) - 1] = '\0';
+        for (int k = 0; k < i; k++) {
+            if (strcmp(prog->quads[k].result, a1) == 0) {
+                snprintf(a1, sizeof(a1), "(%d)", k + 1);
+                break;
+            }
+        }
+        strncpy(tr->arg1, a1, sizeof(tr->arg1) - 1);
+        tr->arg1[sizeof(tr->arg1) - 1] = '\0';
+
+        // Check if arg2 refers to a previous quad's result temporary
+        char a2[64];
+        strncpy(a2, prog->quads[i].arg2, sizeof(a2) - 1);
+        a2[sizeof(a2) - 1] = '\0';
+        for (int k = 0; k < i; k++) {
+            if (strcmp(prog->quads[k].result, a2) == 0) {
+                snprintf(a2, sizeof(a2), "(%d)", k + 1);
+                break;
+            }
+        }
+        strncpy(tr->arg2, a2, sizeof(tr->arg2) - 1);
+        tr->arg2[sizeof(tr->arg2) - 1] = '\0';
+    }
 }
 
 void tac_print(const TACProgram* prog) {
@@ -159,4 +193,21 @@ void quads_print(const TACProgram* prog) {
     }
     printf("+----+------------+----------------------+----------------------+--------+\n");
     printf("Total Quadruples: %d | Temporaries Used: %d\n", prog->quad_count, prog->temp_count);
+}
+
+void triples_print(const TACProgram* prog) {
+    printf("\nTriple Representation Table (Index, Op, Arg1, Arg2):\n");
+    printf("======================================================================\n");
+    printf("+------+------------+----------------------+----------------------+\n");
+    printf("| #    | Op         | Arg1                 | Arg2                 |\n");
+    printf("+------+------------+----------------------+----------------------+\n");
+    for (int i = 0; i < prog->triple_count; i++) {
+        printf("| (%-2d) | %-10s | %-20s | %-20s |\n",
+               i + 1,
+               prog->triples[i].op,
+               prog->triples[i].arg1,
+               prog->triples[i].arg2);
+    }
+    printf("+------+------------+----------------------+----------------------+\n");
+    printf("Total Triples: %d | Results: Referenced by Statement Index (Pointers)\n", prog->triple_count);
 }

@@ -17,12 +17,20 @@ typedef struct {
 } Quadruple;
 
 typedef struct {
+    char op[16];
+    char arg1[64];
+    char arg2[64];
+} Triple;
+
+typedef struct {
     char code[128];
 } TACInstruction;
 
 typedef struct {
     Quadruple quads[MAX_INSTRUCTIONS];
     int quad_count;
+    Triple triples[MAX_INSTRUCTIONS];
+    int triple_count;
     TACInstruction instructions[MAX_INSTRUCTIONS];
     int instruction_count;
     int temp_count;
@@ -31,5 +39,6 @@ typedef struct {
 void tac_generate(const ASTQuery* query, TACProgram* prog);
 void tac_print(const TACProgram* prog);
 void quads_print(const TACProgram* prog);
+void triples_print(const TACProgram* prog);
 
 #endif // TAC_H

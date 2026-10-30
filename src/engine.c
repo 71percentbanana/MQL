@@ -46,102 +46,181 @@ static void add_doc_field(Document* doc, const char* key, DataType type, double 
     }
 }
 
-static void load_built_in_students(CollectionStore* store) {
-    store->doc_count = 0;
+// ---------------------------------------------------------------------------
+// Minimal JSON reader for a collection file: an array of flat documents, e.g.
+//   [ { "name": "Alice", "age": 22, "gpa": 3.85 }, ... ]
+// Values may be strings or numbers (true/false/null are skipped).
+// ---------------------------------------------------------------------------
 
-    // Doc 1
-    Document* d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Alice Walker");
-    add_doc_field(d, "age", TYPE_INT, 22, NULL);
-    add_doc_field(d, "gpa", TYPE_FLOAT, 3.85, NULL);
-    add_doc_field(d, "city", TYPE_STRING, 0, "Seattle");
-    add_doc_field(d, "status", TYPE_STRING, 0, "Active");
+typedef struct {
+    const char* p;
+    char err[160];
+} JsonReader;
 
-    // Doc 2
-    d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Bob Smith");
-    add_doc_field(d, "age", TYPE_INT, 21, NULL);
-    add_doc_field(d, "gpa", TYPE_FLOAT, 3.40, NULL);
-    add_doc_field(d, "city", TYPE_STRING, 0, "Boston");
-    add_doc_field(d, "status", TYPE_STRING, 0, "Active");
-
-    // Doc 3
-    d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Charlie Brown");
-    add_doc_field(d, "age", TYPE_INT, 19, NULL);
-    add_doc_field(d, "gpa", TYPE_FLOAT, 3.90, NULL);
-    add_doc_field(d, "city", TYPE_STRING, 0, "Seattle");
-    add_doc_field(d, "status", TYPE_STRING, 0, "Probation");
-
-    // Doc 4
-    d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Diana Prince");
-    add_doc_field(d, "age", TYPE_INT, 23, NULL);
-    add_doc_field(d, "gpa", TYPE_FLOAT, 3.95, NULL);
-    add_doc_field(d, "city", TYPE_STRING, 0, "New York");
-    add_doc_field(d, "status", TYPE_STRING, 0, "Active");
-
-    // Doc 5
-    d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Evan Wright");
-    add_doc_field(d, "age", TYPE_INT, 20, NULL);
-    add_doc_field(d, "gpa", TYPE_FLOAT, 3.10, NULL);
-    add_doc_field(d, "city", TYPE_STRING, 0, "Chicago");
-    add_doc_field(d, "status", TYPE_STRING, 0, "Graduated");
+static void json_skip_ws(JsonReader* r) {
+    while (*r->p && isspace((unsigned char)*r->p)) r->p++;
 }
 
-static void load_built_in_employees(CollectionStore* store) {
+static bool json_expect(JsonReader* r, char c) {
+    json_skip_ws(r);
+    if (*r->p != c) {
+        snprintf(r->err, sizeof(r->err), "expected '%c' but found '%.10s'", c, *r->p ? r->p : "end of file");
+        return false;
+    }
+    r->p++;
+    return true;
+}
+
+static bool json_read_string(JsonReader* r, char* out, size_t out_sz) {
+    if (!json_expect(r, '"')) return false;
+    size_t n = 0;
+    while (*r->p && *r->p != '"') {
+        char c = *r->p++;
+        if (c == '\\') {
+            char e = *r->p++;
+            switch (e) {
+                case 'n': c = '\n'; break;
+                case 't': c = '\t'; break;
+                case 'r': c = '\r'; break;
+                case '"': case '\\': case '/': c = e; break;
+                default:
+                    snprintf(r->err, sizeof(r->err), "unsupported escape '\\%c' in string", e ? e : ' ');
+                    return false;
+            }
+        }
+        if (n + 1 < out_sz) out[n++] = c;
+    }
+    if (*r->p != '"') {
+        snprintf(r->err, sizeof(r->err), "unterminated string");
+        return false;
+    }
+    r->p++;
+    out[n] = '\0';
+    return true;
+}
+
+static bool json_read_document(JsonReader* r, const char* collection, Document* doc) {
+    doc->field_count = 0;
+    if (!json_expect(r, '{')) return false;
+    json_skip_ws(r);
+    if (*r->p == '}') { r->p++; return true; }
+
+    for (;;) {
+        char key[64];
+        if (!json_read_string(r, key, sizeof(key))) return false;
+        if (!json_expect(r, ':')) return false;
+        json_skip_ws(r);
+
+        if (*r->p == '"') {
+            char value[128];
+            if (!json_read_string(r, value, sizeof(value))) return false;
+            add_doc_field(doc, key, TYPE_STRING, 0, value);
+        } else if (*r->p == '-' || isdigit((unsigned char)*r->p)) {
+            char* end;
+            double num = strtod(r->p, &end);
+            bool has_fraction = false;
+            for (const char* q = r->p; q < end; q++) {
+                if (*q == '.' || *q == 'e' || *q == 'E') has_fraction = true;
+            }
+            r->p = end;
+            // Prefer the declared schema type; fall back to the literal's shape.
+            DataType type = schema_get_field_type(collection, key);
+            if (type != TYPE_INT && type != TYPE_FLOAT) type = has_fraction ? TYPE_FLOAT : TYPE_INT;
+            add_doc_field(doc, key, type, num, NULL);
+        } else if (strncmp(r->p, "true", 4) == 0 || strncmp(r->p, "null", 4) == 0) {
+            r->p += 4;
+        } else if (strncmp(r->p, "false", 5) == 0) {
+            r->p += 5;
+        } else {
+            snprintf(r->err, sizeof(r->err), "unsupported value for field '%s'", key);
+            return false;
+        }
+
+        json_skip_ws(r);
+        if (*r->p == ',') { r->p++; continue; }
+        return json_expect(r, '}');
+    }
+}
+
+static bool load_collection(CollectionStore* store, const char* data_dir, const char* collection) {
     store->doc_count = 0;
 
-    // Doc 1
-    Document* d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Sarah Connor");
-    add_doc_field(d, "department", TYPE_STRING, 0, "Engineering");
-    add_doc_field(d, "salary", TYPE_FLOAT, 95000.0, NULL);
-    add_doc_field(d, "experience", TYPE_INT, 6, NULL);
-    add_doc_field(d, "role", TYPE_STRING, 0, "Lead Dev");
+    char lower[64];
+    size_t i = 0;
+    for (; collection[i] && i + 1 < sizeof(lower); i++) lower[i] = (char)tolower((unsigned char)collection[i]);
+    lower[i] = '\0';
 
-    // Doc 2
-    d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "John Doe");
-    add_doc_field(d, "department", TYPE_STRING, 0, "Engineering");
-    add_doc_field(d, "salary", TYPE_FLOAT, 72000.0, NULL);
-    add_doc_field(d, "experience", TYPE_INT, 3, NULL);
-    add_doc_field(d, "role", TYPE_STRING, 0, "Software Engineer");
+    char path[512];
+    snprintf(path, sizeof(path), "%s/%s.json", data_dir, lower);
 
-    // Doc 3
-    d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Jane Smith");
-    add_doc_field(d, "department", TYPE_STRING, 0, "Marketing");
-    add_doc_field(d, "salary", TYPE_FLOAT, 65000.0, NULL);
-    add_doc_field(d, "experience", TYPE_INT, 4, NULL);
-    add_doc_field(d, "role", TYPE_STRING, 0, "Marketing Lead");
+    FILE* f = fopen(path, "rb");
+    if (!f) {
+        fprintf(stderr, "Execution Error: Cannot open collection file '%s'\n", path);
+        return false;
+    }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char* text = (char*)malloc(sz + 1);
+    if (!text) {
+        fclose(f);
+        return false;
+    }
+    size_t read_bytes = fread(text, 1, sz, f);
+    text[read_bytes] = '\0';
+    fclose(f);
 
-    // Doc 4
-    d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Michael Scott");
-    add_doc_field(d, "department", TYPE_STRING, 0, "Management");
-    add_doc_field(d, "salary", TYPE_FLOAT, 85000.0, NULL);
-    add_doc_field(d, "experience", TYPE_INT, 10, NULL);
-    add_doc_field(d, "role", TYPE_STRING, 0, "Regional Manager");
+    JsonReader r = { text, "" };
+    bool ok = json_expect(&r, '[');
+    json_skip_ws(&r);
+    if (ok && *r.p == ']') {
+        r.p++;
+    } else {
+        while (ok) {
+            if (store->doc_count >= MAX_DOCS) {
+                snprintf(r.err, sizeof(r.err), "more than %d documents", MAX_DOCS);
+                ok = false;
+                break;
+            }
+            ok = json_read_document(&r, collection, &store->docs[store->doc_count++]);
+            json_skip_ws(&r);
+            if (ok && *r.p == ',') { r.p++; continue; }
+            if (ok) ok = json_expect(&r, ']');
+            break;
+        }
+    }
 
-    // Doc 5
-    d = &store->docs[store->doc_count++];
-    d->field_count = 0;
-    add_doc_field(d, "name", TYPE_STRING, 0, "Dwight Schrute");
-    add_doc_field(d, "department", TYPE_STRING, 0, "Sales");
-    add_doc_field(d, "salary", TYPE_FLOAT, 58000.0, NULL);
-    add_doc_field(d, "experience", TYPE_INT, 5, NULL);
-    add_doc_field(d, "role", TYPE_STRING, 0, "Assistant Regional Manager");
+    if (!ok) fprintf(stderr, "Execution Error: Invalid JSON in '%s': %s\n", path, r.err);
+    free(text);
+    return ok;
+}
+
+static void print_json_string(const char* s) {
+    putchar('"');
+    for (; *s; s++) {
+        switch (*s) {
+            case '"':  printf("\\\""); break;
+            case '\\': printf("\\\\"); break;
+            case '\n': printf("\\n"); break;
+            case '\t': printf("\\t"); break;
+            case '\r': printf("\\r"); break;
+            default:   putchar(*s);
+        }
+    }
+    putchar('"');
+}
+
+static void print_doc_field(const DocField* f) {
+    printf("  ");
+    print_json_string(f->key);
+    printf(": ");
+    if (f->type == TYPE_STRING) {
+        print_json_string(f->str_val);
+    } else if (f->type == TYPE_INT) {
+        printf("%d", (int)f->num_val);
+    } else {
+        printf("%.2f", f->num_val);
+    }
 }
 
 static const DocField* find_field(const Document* doc, const char* key) {
@@ -219,14 +298,8 @@ static int doc_sort_compare(const void* a, const void* b) {
 }
 
 bool engine_execute_query(const ASTQuery* query, const char* data_dir) {
-    (void)data_dir;
-    CollectionStore store;
-    if (ci_equals(query->collection, "students")) {
-        load_built_in_students(&store);
-    } else if (ci_equals(query->collection, "employees")) {
-        load_built_in_employees(&store);
-    } else {
-        fprintf(stderr, "Execution Error: Unknown collection '%s'\n", query->collection);
+    static CollectionStore store;
+    if (!load_collection(&store, data_dir, query->collection)) {
         return false;
     }
 
@@ -256,8 +329,9 @@ bool engine_execute_query(const ASTQuery* query, const char* data_dir) {
 
     printf("\nExecution Engine: MongoDB Document Query Results:\n");
     printf("======================================================================\n");
-    printf("Database: local_db | Collection: %s | Evaluated: %d | Returned: %d\n\n",
+    printf("Database: local_db | Collection: %s | Evaluated: %d | Returned: %d\n",
            query->collection, store.doc_count, final_count);
+    printf("Source: %s/%s.json\n\n", data_dir, query->collection);
 
     if (final_count == 0) {
         printf("/* 0 documents found matching criteria */\n");
@@ -271,14 +345,7 @@ bool engine_execute_query(const ASTQuery* query, const char* data_dir) {
         if (query->projection.is_wildcard) {
             for (int j = 0; j < doc->field_count; j++) {
                 if (has_prev) printf(",\n");
-                const DocField* f = &doc->fields[j];
-                if (f->type == TYPE_STRING) {
-                    printf("  \"%s\": \"%s\"", f->key, f->str_val);
-                } else if (f->type == TYPE_INT) {
-                    printf("  \"%s\": %d", f->key, (int)f->num_val);
-                } else {
-                    printf("  \"%s\": %.2f", f->key, f->num_val);
-                }
+                print_doc_field(&doc->fields[j]);
                 has_prev = true;
             }
         } else {
@@ -286,13 +353,7 @@ bool engine_execute_query(const ASTQuery* query, const char* data_dir) {
                 const DocField* f = find_field(doc, query->projection.fields[p]);
                 if (f) {
                     if (has_prev) printf(",\n");
-                    if (f->type == TYPE_STRING) {
-                        printf("  \"%s\": \"%s\"", f->key, f->str_val);
-                    } else if (f->type == TYPE_INT) {
-                        printf("  \"%s\": %d", f->key, (int)f->num_val);
-                    } else {
-                        printf("  \"%s\": %.2f", f->key, f->num_val);
-                    }
+                    print_doc_field(f);
                     has_prev = true;
                 }
             }

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQL2Mongo</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/theme.js"></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap header">
+      <h1>SQL2Mongo</h1>
+      <nav aria-label="Pages">
+        <a href="#query" data-page="query">Query</a>
+        <a href="#phases" data-page="phases">Compiler phases <span id="nav-phases" class="mark"></span></a>
+        <a href="#database" data-page="database">Database</a>
+      </nav>
+      <span id="status" class="status muted">Connecting…</span>
+      <div class="toggle" role="group" aria-label="Theme">
+        <button data-set-theme="light" aria-pressed="true">Light</button>
+        <button data-set-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p id="error" class="error" role="alert" hidden></p>
+
+    <div id="view-query" class="view">
+      <div class="split">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>SQL</h2>
+            <label class="sr-only" for="examples">Examples</label>
+            <select id="examples" class="push">
+              <option value="">Load example…</option>
+              <option value="top">Top students by GPA</option>
+              <option value="engineering">Engineering salaries</option>
+              <option value="logical">AND / OR filter</option>
+              <option value="all">All students</option>
+              <option value="empty">No matches</option>
+              <option value="semantic">Semantic error</option>
+              <option value="syntax">Syntax error</option>
+            </select>
+          </div>
+          <div class="editor">
+            <pre id="sql-highlight" class="editor-layer" aria-hidden="true"></pre>
+            <textarea id="sql" class="editor-layer" spellcheck="false" autocapitalize="off" autocomplete="off" maxlength="4000" aria-label="SQL query">SELECT name, age, gpa
+FROM students
+WHERE age &gt;= 20
+ORDER BY gpa DESC
+LIMIT 3;</textarea>
+          </div>
+          <div class="panel-foot">
+            <button id="run" class="primary">Run query</button>
+            <span class="muted small"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>MongoDB</h2>
+            <span id="pipeline-info" class="muted small"></span>
+            <button id="copy" class="push" disabled>Copy</button>
+          </div>
+          <pre id="mongo" class="code fill"></pre>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Results</h2>
+          <span id="summary" class="muted small"></span>
+          <div class="toggle push" role="group" aria-label="Result format">
+            <button data-view="results" data-format="json" aria-pressed="true">JSON</button>
+            <button data-view="results" data-format="table" aria-pressed="false">Table</button>
+          </div>
+        </div>
+        <div id="results" class="panel-body"></div>
+      </section>
+    </div>
+
+    <div id="view-phases" class="view" hidden>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Compiler phases</h2>
+          <span id="phase-summary" class="muted small"></span>
+          <button id="trace" class="push" disabled>Download trace</button>
+        </div>
+        <pre id="phase-sql" class="code compact" hidden></pre>
+        <div id="phases" class="tabs" role="tablist" aria-label="Compiler phases"></div>
+        <div class="phase-intro">
+          <p id="phase-description" class="muted small"></p>
+          <div id="parts" class="pills" role="tablist" aria-label="Phase output"></div>
+        </div>
+        <div id="phase-output" class="panel-body scroll-y tall" role="tabpanel"></div>
+      </section>
+    </div>
+
+    <div id="view-database" class="view" hidden>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Database</h2>
+          <span class="muted small">local_db</span>
+          <div class="toggle push" role="group" aria-label="Collection format">
+            <button data-view="database" data-format="json" aria-pressed="true">JSON</button>
+            <button data-view="database" data-format="table" aria-pressed="false">Table</button>
+          </div>
+          <button id="add-doc" aria-expanded="false" aria-controls="add-form">Add document</button>
+        </div>
+        <div id="collections" class="tabs" role="tablist" aria-label="Collections"></div>
+        <div id="collection-info" class="phase-intro"></div>
+        <form id="add-form" class="add-form" hidden></form>
+        <div id="collection" class="panel-body"></div>
+      </section>
+      <p class="muted small">Queries are executed by the C engine against the JSON files in <code>data/</code>. Add a document or edit a file, then run the query again to see the change.</p>
+    </div>
+  </main>
+</body>
+</html>

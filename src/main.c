@@ -33,6 +33,25 @@ static char* read_entire_file(const char* filepath) {
     return buf;
 }
 
+// Collections live in data/<collection>.json. Look in the working directory
+// first, then next to the executable so the compiler runs from anywhere.
+static void resolve_data_dir(const char* prog_path, char* out, size_t out_sz) {
+    FILE* probe = fopen("data/students.json", "rb");
+    if (probe) {
+        fclose(probe);
+        snprintf(out, out_sz, "data");
+        return;
+    }
+    const char* slash = strrchr(prog_path, '/');
+    const char* backslash = strrchr(prog_path, '\\');
+    if (backslash && (!slash || backslash > slash)) slash = backslash;
+    if (slash) {
+        snprintf(out, out_sz, "%.*s/data", (int)(slash - prog_path), prog_path);
+    } else {
+        snprintf(out, out_sz, "data");
+    }
+}
+
 static void print_banner(void) {
     printf("======================================================================\n");
     printf("   SQL2Mongo: Query Compiler, Transpiler & Execution Engine\n");
@@ -44,13 +63,16 @@ static void print_usage(const char* prog_name) {
     print_banner();
     printf("\nUsage: %s <query_file.sql | \"SQL query text\"> [options]\n\n", prog_name);
     printf("Compiler Phase Options:\n");
-    printf("  --tokens     Stage 1: Lexical Token Stream Table (Scanner)\n");
-    printf("  --ast        Stage 2: Abstract Syntax Tree (Parser)\n");
-    printf("  --schema     Stage 3: Symbol Table & Semantic Checks\n");
-    printf("  --tac        Stage 4: Three-Address Code (TAC) & Quadruple Table (IR)\n");
-    printf("  --opt        Stage 5: Code Optimization (Constant Folding & Pushdown)\n");
-    printf("  --mongo      Stage 6: Target MongoDB Aggregation Pipeline (MQL)\n");
-    printf("  --run        Stage 7: Execution Engine (MongoDB Document Results)\n");
+    printf("  --tokens     Stage 1:  Lexical Token Stream Table (Scanner)\n");
+    printf("  --tree       Stage 2a: Concrete Parse Tree (CST Derivations)\n");
+    printf("  --ast        Stage 2b: Abstract Syntax Tree (Parser)\n");
+    printf("  --schema     Stage 3:  Symbol Table, Scope & Semantic Checks\n");
+    printf("  --tac        Stage 4a: Three-Address Code (TAC IR)\n");
+    printf("  --quads      Stage 4b: Quadruple Table (Op, Arg1, Arg2, Result)\n");
+    printf("  --triples    Stage 4c: Triple Table (Op, Arg1, Arg2 with Statement References)\n");
+    printf("  --opt        Stage 5:  Code Optimization (Constant Folding & Pushdown)\n");
+    printf("  --mongo      Stage 6:  Target MongoDB Aggregation Pipeline (MQL)\n");
+    printf("  --run        Stage 7:  Execution Engine (MongoDB Document Results)\n");
     printf("  --all        Run All Compiler Stages in Sequence (Default)\n");
     printf("  --help       Show this help manual\n\n");
     printf("Example:\n");
@@ -69,20 +91,26 @@ int main(int argc, char* argv[]) {
     }
 
     const char* input_arg = argv[1];
-    bool flag_tokens = false;
-    bool flag_ast    = false;
-    bool flag_schema = false;
-    bool flag_tac    = false;
-    bool flag_opt    = false;
-    bool flag_mongo  = false;
-    bool flag_run    = false;
-    bool flag_all    = false;
+    bool flag_tokens  = false;
+    bool flag_tree    = false;
+    bool flag_ast     = false;
+    bool flag_schema  = false;
+    bool flag_tac     = false;
+    bool flag_quads   = false;
+    bool flag_triples = false;
+    bool flag_opt     = false;
+    bool flag_mongo   = false;
+    bool flag_run     = false;
+    bool flag_all     = false;
 
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--tokens") == 0) flag_tokens = true;
+        else if (strcmp(argv[i], "--tree") == 0) flag_tree = true;
         else if (strcmp(argv[i], "--ast") == 0) flag_ast = true;
         else if (strcmp(argv[i], "--schema") == 0) flag_schema = true;
         else if (strcmp(argv[i], "--tac") == 0) flag_tac = true;
+        else if (strcmp(argv[i], "--quads") == 0) flag_quads = true;
+        else if (strcmp(argv[i], "--triples") == 0) flag_triples = true;
         else if (strcmp(argv[i], "--opt") == 0) flag_opt = true;
         else if (strcmp(argv[i], "--mongo") == 0) flag_mongo = true;
         else if (strcmp(argv[i], "--run") == 0) flag_run = true;
@@ -90,7 +118,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Default to --all if no specific stage flag is set
-    if (!flag_tokens && !flag_ast && !flag_schema && !flag_tac && !flag_opt && !flag_mongo && !flag_run) {
+    if (!flag_tokens && !flag_tree && !flag_ast && !flag_schema &&
+        !flag_tac && !flag_quads && !flag_triples && !flag_opt && !flag_mongo && !flag_run) {
         flag_all = true;
     }
 
@@ -119,17 +148,33 @@ int main(int argc, char* argv[]) {
     bool parse_success = parser_parse(&parser, &query);
 
     if (!parse_success) {
+        if (strstr(parser.error_msg, "Lexical error")) {
+            printf("\n======================================================================\n");
+            printf("  STAGE 1 LEXICAL ERROR: UNRECOGNIZED TOKEN OR MALFORMED LEXEME\n");
+            printf("======================================================================\n");
+            fprintf(stderr, "%s\n", parser.error_msg);
+            if (file_content) free(file_content);
+            return 1;
+        } else {
+            printf("\n======================================================================\n");
+            printf("  STAGE 2 SYNTAX VALIDATION STATUS: INVALID GRAMMAR DETECTED\n");
+            printf("======================================================================\n");
+            fprintf(stderr, "%s\n", parser.error_msg);
+            if (file_content) free(file_content);
+            return 1;
+        }
+    }
+
+    if (flag_tree || flag_all) {
         printf("\n======================================================================\n");
-        printf("  SYNTAX VALIDATION STATUS: INVALID GRAMMAR DETECTED\n");
+        printf("  STAGE 2a: Concrete Parse Tree (CST - Grammar Derivations)\n");
         printf("======================================================================\n");
-        fprintf(stderr, "%s\n", parser.error_msg);
-        if (file_content) free(file_content);
-        return 1;
+        parse_tree_print(&query);
     }
 
     if (flag_ast || flag_all) {
         printf("\n======================================================================\n");
-        printf("  STAGE 2: Syntax Analysis & Abstract Syntax Tree (AST)\n");
+        printf("  STAGE 2b: Syntax Analysis & Abstract Syntax Tree (AST)\n");
         printf("======================================================================\n");
         ast_print(&query);
         printf("Syntax Status: VALID (Grammar Verified without errors)\n");
@@ -151,7 +196,7 @@ int main(int argc, char* argv[]) {
             if (file_content) free(file_content);
             return 2;
         } else {
-            printf("\nSemantic Status: PASS (Collections, fields, and types verified)\n");
+            printf("\nSemantic Status: PASS (Collections, fields, scopes and types verified)\n");
         }
     } else if (!sem_valid) {
         fprintf(stderr, "\n%s\n", sem_err);
@@ -160,16 +205,23 @@ int main(int argc, char* argv[]) {
         return 2;
     }
 
-    // 4. Intermediate Code Generation (TAC & Quadruples)
+    // 4. Intermediate Code Generation (TAC, Quadruples & Triples)
     TACProgram tac_prog;
     tac_generate(&query, &tac_prog);
 
-    if (flag_tac || flag_all) {
+    if (flag_tac || flag_quads || flag_triples || flag_all) {
         printf("\n======================================================================\n");
-        printf("  STAGE 4: Intermediate Code (Three-Address Code & Quadruples)\n");
+        printf("  STAGE 4: Intermediate Code Generation (IR)\n");
         printf("======================================================================\n");
-        tac_print(&tac_prog);
-        quads_print(&tac_prog);
+        if (flag_tac || flag_all) {
+            tac_print(&tac_prog);
+        }
+        if (flag_quads || flag_all) {
+            quads_print(&tac_prog);
+        }
+        if (flag_triples || flag_all) {
+            triples_print(&tac_prog);
+        }
     }
 
     // 5. Code Optimization Stage
@@ -196,7 +248,13 @@ int main(int argc, char* argv[]) {
         printf("\n======================================================================\n");
         printf("  STAGE 7: Execution Engine (MongoDB Document Results)\n");
         printf("======================================================================\n");
-        engine_execute_query(&query, "data");
+        char data_dir[512];
+        resolve_data_dir(argv[0], data_dir, sizeof(data_dir));
+        if (!engine_execute_query(&query, data_dir)) {
+            ast_free(&query);
+            if (file_content) free(file_content);
+            return 3;
+        }
     }
 
     printf("\n======================================================================\n");

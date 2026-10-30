@@ -1,0 +1,13 @@
+{
+  "name": "sql2mongo-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local presentation dashboard for the SQL2Mongo C compiler",
+  "scripts": {
+    "start": "node server.mjs",
+    "build:compiler": "node build.mjs",
+    "test": "node --test test/dashboard.test.mjs"
+  },
+  "engines": { "node": ">=20" }
+}
